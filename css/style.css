@@ -117,3 +117,5 @@ body.notm .stk{display:none}
 
 #pipTab{position:fixed;display:none;width:22px;height:44px;padding:0;z-index:5;background:rgba(0,0,0,.55);border:1px solid var(--l);color:#fff;font-size:14px;line-height:42px;cursor:pointer;pointer-events:auto}
 body.idle #pipTab{opacity:0}
+
+#sndBtn{display:flex;align-items:center;gap:8px;padding:8px 10px;font-size:11px;letter-spacing:.14em}#sndBtn .sx{display:none}#sndBtn.off .sw{display:none}#sndBtn.off .sx{display:block}#sndBtn.off{opacity:.6}

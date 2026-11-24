@@ -22,9 +22,10 @@ function stopRec(){if(rec&&rec.mr.state!=='inactive')rec.mr.stop();}
 // start recording
 function startRec(){if(rec)return stopRec();if(!pts.length)return msg('Load a flight first');
   const c=renderer.domElement,cw=Math.min(c.width,1920)&~1,chh=Math.round(cw*c.height/c.width)&~1,cv=document.createElement('canvas');cv.width=cw;cv.height=chh;
-  const mt=['video/mp4;codecs=avc1','video/webm;codecs=vp9','video/webm'].find(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported(t));
+  const wa=sndOn(),mt=(wa?['video/mp4;codecs=avc1,mp4a.40.2','video/webm;codecs=vp9,opus']:[]).concat(['video/mp4;codecs=avc1','video/webm;codecs=vp9','video/webm']).find(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported(t));
   if(!mt)return msg('Video recording is not supported in this browser: use Chrome or Edge');
-  const parts=[],mr=new MediaRecorder(cv.captureStream(30),{mimeType:mt,videoBitsPerSecond:12e6});
+  const vs=cv.captureStream(30),as=sndStream();if(as)as.getAudioTracks().forEach(a=>vs.addTrack(a));
+  const parts=[],mr=new MediaRecorder(vs,{mimeType:mt,videoBitsPerSecond:12e6});
   mr.ondataavailable=e=>{if(e.data.size)parts.push(e.data);};
   mr.onstop=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(parts,{type:mt}));a.download='rocket-flight.'+(mt.includes('mp4')?'mp4':'webm');a.click();setTimeout(()=>URL.revokeObjectURL(a.href),6e4);rec=null;$('exp').textContent='Export video';msg('Video saved to your downloads');};
   rec={cv,cx:cv.getContext('2d'),mr};T=pts[0].t;playing=true;mr.start(250);$('panel').classList.add('min');$('exp').textContent='Stop recording';msg('Recording in real time at the selected speed. It stops after landing.');}

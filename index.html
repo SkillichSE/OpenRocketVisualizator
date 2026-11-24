@@ -12,7 +12,7 @@
 <div id="pip"><span>ONBOARD CAM</span></div><button id="pipTab" title="Hide / show small window" aria-label="Hide window">⟩</button>
 <div id="top"><button id="gear" title="Menu (M)" aria-label="Menu"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M2 4.5h14M2 9h14M2 13.5h14" stroke="#fff" stroke-width="1.5"/></svg></button>
 <div id="brand"><svg width="16" height="20" viewBox="0 0 16 20"><path d="M8 0l4 8v8l-2.5-1.5h-3L4 16V8z" fill="#fff"/><path d="M4 12l-3 5 3-1zM12 12l3 5-3-1z" fill="#fff"/></svg><span id="bn">Rocket Flight 3D</span></div></div>
-<div id="ctl"><button id="camBtn" title="Camera: free or follow (C)" aria-label="Camera"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#fff" stroke-width="1.4"><rect x="1.5" y="4.5" width="15" height="10" rx="1"/><circle cx="9" cy="9.5" r="2.8"/><path d="M6 4.5l1-2h4l1 2"/></svg><span id="camL">Free</span></button><button id="dBtn" title="All CSV channels (D)">Data</button></div>
+<div id="ctl"><button id="camBtn" title="Camera: free or follow (C)" aria-label="Camera"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#fff" stroke-width="1.4"><rect x="1.5" y="4.5" width="15" height="10" rx="1"/><circle cx="9" cy="9.5" r="2.8"/><path d="M6 4.5l1-2h4l1 2"/></svg><span id="camL">Free</span></button><button id="sndBtn" title="Sound on / off (S)" aria-label="Sound"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#fff" stroke-width="1.4"><path d="M2 7h3l4-3.5v11L5 11H2z"/><path class="sw" d="M12 6.5a4 4 0 010 5M14.2 4.5a7 7 0 010 9"/><path class="sx" d="M12 6.5l4 5M16 6.5l-4 5"/></svg><span id="sndL">Sound</span></button><button id="dBtn" title="All CSV channels (D)">Data</button></div>
 <div id="msg">Open the menu and load a CSV</div>
 <aside id="panel"><header><b>Setup</b><button id="min" title="Close (M)">✕</button></header><div id="pbody">
 <section class="main">
@@ -53,6 +53,9 @@
 <label class="ck"><input type="checkbox" id="tm" checked><span>Show telemetry panels (T)</span></label>
 <label class="ck"><input type="checkbox" id="mk"><span>Show start / apogee / landing markers</span></label>
 <label class="ck"><input type="checkbox" id="autohide" checked><span>Auto-hide buttons while playing</span></label>
+<div class="sub">Sound</div>
+<label class="ck"><input type="checkbox" id="snd" checked><span>Flight sounds (S)</span></label>
+<span class="lb">Volume</span><input id="vol" type="range" min="0" max="100" value="70">
 </details>
 <div class="foot"><button id="wipe" class="wide">Reset all saved data</button>
 <p>Made by Ski's Team</p></div>
@@ -86,6 +89,7 @@
 <script src="js/recorder.js"></script>
 <script src="js/picker.js"></script>
 <script src="js/demo-data.js"></script>
+<script src="js/sound.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/store.js"></script>
 </body></html>
