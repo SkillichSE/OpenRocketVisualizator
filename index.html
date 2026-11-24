@@ -12,24 +12,23 @@
 <div id="pip"><span>ONBOARD CAM</span></div>
 <div id="top"><button id="gear" title="Menu (M)" aria-label="Menu"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M2 4.5h14M2 9h14M2 13.5h14" stroke="#fff" stroke-width="1.5"/></svg></button>
 <div id="brand"><svg width="16" height="20" viewBox="0 0 16 20"><path d="M8 0l4 8v8l-2.5-1.5h-3L4 16V8z" fill="#fff"/><path d="M4 12l-3 5 3-1zM12 12l3 5-3-1z" fill="#fff"/></svg><span id="bn">Rocket Flight 3D</span></div></div>
-<div id="ctl"><button id="play">Play</button><button id="exp">Export video</button>
-<select id="spd"><option value="0.25">×0.25</option><option value="0.5">×0.5</option><option value="1" selected>×1</option><option value="4">×4</option><option value="10">×10</option><option value="20">×20</option></select>
-<select id="cam"><option value="free">Free camera</option><option value="follow">Follow rocket</option></select></div>
-<div id="msg">Open the menu and load a CSV, or press Demo</div>
+<div id="ctl"><button id="camBtn" title="Camera: free or follow (C)" aria-label="Camera"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#fff" stroke-width="1.4"><rect x="1.5" y="4.5" width="15" height="10" rx="1"/><circle cx="9" cy="9.5" r="2.8"/><path d="M6 4.5l1-2h4l1 2"/></svg><span id="camL">Free</span></button></div>
+<div id="msg">Open the menu and load a CSV</div>
 <aside id="panel"><header><b>Setup</b><button id="min" title="Close (M)">✕</button></header><div id="pbody">
 <section class="main">
 <div class="grp"><span class="gt">1 Flight CSV</span>
-<div class="blk"><input type="file" id="fcsv" accept=".csv,.txt"><label class="btn" for="fcsv">Choose CSV</label><button id="demo">Demo</button></div>
+<div class="blk"><input type="file" id="fcsv" accept=".csv,.txt"><label class="btn" for="fcsv">Choose CSV</label></div>
 <div class="st" id="stF">No flight loaded</div></div>
 <div class="grp"><span class="gt">2 Rocket model OBJ</span>
 <div class="blk"><input type="file" id="fobj" accept=".obj,.mtl" multiple><label class="btn" for="fobj">Choose OBJ + MTL</label></div>
 <div class="st" id="stM">Default model</div></div>
 <div class="grp"><span class="gt">3 Map</span>
-<button id="pick" class="wide">Pick launch site on map</button>
-<div class="row"><input id="lat" placeholder="Latitude"><input id="lon" placeholder="Longitude"></div>
-<select id="prov"><option value="esri">Satellite (Esri)</option><option value="esrist">Streets (Esri)</option><option value="esritopo">Topo (Esri)</option><option value="carto">Dark (CARTO)</option><option value="osm">OpenStreetMap</option><option value="google">Google Static Maps (key required)</option><option value="none">No map</option></select>
-<input id="key" placeholder="Google Maps API key" style="display:none">
-<div class="row"><input id="km" type="number" placeholder="Map size km (auto)"><button id="map">Update map</button></div></div>
+<button id="pick" class="wide">Pick launch site</button>
+<div class="st" id="stL">No launch site</div></div>
+<div class="grp"><span class="gt">4 Playback</span>
+<button id="exp" class="wide">Export video</button>
+<div class="row"><div><span class="lb">Speed</span><select id="spd"><option value="0.25">×0.25</option><option value="0.5">×0.5</option><option value="1" selected>×1</option><option value="4">×4</option><option value="10">×10</option><option value="20">×20</option></select></div>
+<div><span class="lb">Camera</span><select id="cam"><option value="free">Free</option><option value="follow">Follow rocket</option></select></div></div></div>
 </section>
 <details id="s-opt"><summary>Options</summary>
 <div class="sub">Flight</div>
@@ -54,10 +53,15 @@
 <div class="foot"><button id="wipe" class="wide">Reset all saved data</button>
 <p>Everything is saved automatically in this browser<br>Drop .csv / .obj / .mtl files anywhere<br>Keys: Space play · M menu · F fullscreen · ← → ±5 s</p></div>
 </div></aside>
-<div id="mm"><div id="mh"><b>Select launch site</b><input id="mq" placeholder="Search a place or type lat, lon"><button id="mg">Search</button><button id="mu">Satellite / Streets</button><button id="mok">Use this location</button><button id="mc">Cancel</button></div><div id="mmap"></div><div id="mi">Click anywhere on the world map to place the launch site</div></div>
+<div id="mm"><div id="mh"><b>Launch site</b><input id="mq" placeholder="Search a place or type lat, lon"><button id="mg">Search</button><button id="mu">Satellite / Streets</button><button id="mok">Use this location</button><button id="mc">Cancel</button></div>
+<div id="mo"><label>Latitude<input id="lat" placeholder="Latitude"></label><label>Longitude<input id="lon" placeholder="Longitude"></label>
+<label>Map style<select id="prov"><option value="esri">Satellite (Esri)</option><option value="esrist">Streets (Esri)</option><option value="esritopo">Topo (Esri)</option><option value="carto">Dark (CARTO)</option><option value="osm">OpenStreetMap</option><option value="google">Google Static Maps (key required)</option><option value="none">No map</option></select></label>
+<label id="keyw" style="display:none">Google API key<input id="key" placeholder="Google Maps API key"></label>
+<label>Map size, km<input id="km" type="number" placeholder="Auto"></label></div>
+<div id="mmap"></div><div id="mi">Click anywhere on the world map to place the launch site</div></div>
 <div id="foot">
 <div class="tel"><small>Speed</small><div><b id="hV">0</b><u>km/h</u></div><small class="s">Thrust <span id="hF">0</span> N</small></div>
-<div id="mid"><div id="hP">Standby</div><div id="hT">T+ 00:00:00</div>
+<div id="mid"><button id="play">Launch</button><div id="hP">Standby</div><div id="hT">T+ 00:00:00</div>
 <div id="track"><div id="fill"></div><div id="ticks"></div><input id="seek" type="range" min="0" max="1000" value="0"></div></div>
 <div class="tel r"><small>Altitude</small><div><b id="hA">0</b><u id="uA">m</u></div><small class="s">Apogee <span id="hM">0</span> <span id="uM">m</span></small></div>
 </div>

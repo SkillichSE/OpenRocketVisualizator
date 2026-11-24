@@ -23,12 +23,12 @@ $('wipe').onclick=async()=>{if(!confirm('Delete all saved settings and files fro
 // restore on start
 (async()=>{let s=null;try{s=JSON.parse(localStorage.getItem(LSK));}catch(e){}
   try{if(s){IDS.forEach(i=>{if(s[i]!=null){const e=$(i);if(e.type==='checkbox')e.checked=!!s[i];else e.value=s[i];}});
-      $('key').style.display=$('prov').value==='google'?'block':'none';$('panel').classList.toggle('min',!s.menu);
-      Object.entries(s.det||{}).forEach(([k,v])=>{const d=$(k);if(d)d.open=v;});keepSc=true;$('mname').oninput();}
+      $('keyw').style.display=$('prov').value==='google'?'block':'none';$('panel').classList.toggle('min',!s.menu);
+      Object.entries(s.det||{}).forEach(([k,v])=>{const d=$(k);if(d)d.open=v;});keepSc=true;$('mname').oninput();camSync();updSite();}
     const [csv,demo,obj,mtl]=await Promise.all(['csv','demo','obj','mtl'].map(k=>kv('get',k)));
     if(mtl){mtlInfo=parseMTL(mtl.text);setSt('stM',mtl.name);}
     if(obj){loadOBJ(obj.text);setSt('stM',obj.name+(mtl?' + '+mtl.name:''));}
-    if(csv){loadCSV(csv.text);setSt('stF',csv.name);if(objInfo)applyObj();}else if(demo){$('demo').onclick();setSt('stF','Demo flight');}
+    if(csv){loadCSV(csv.text);setSt('stF',csv.name);if(objInfo)applyObj();}else if(demo){runDemo();setSt('stF','Demo flight');}
     if(s&&pts.length){if(isFinite(s.T))T=Math.min(tEnd,Math.max(pts[0].t,s.T));if(s.cam){camera.position.fromArray(s.cam[0]);controls.target.fromArray(s.cam[1]);}}
   }catch(e){console.error(e);}
   keepSc=false;ready=true;})();

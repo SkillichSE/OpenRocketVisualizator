@@ -43,7 +43,7 @@ function renderAll(){const m=$('bmode').value,full=m==='full'&&pts.length,pip=m=
 // main loop
 let last=performance.now();
 function frame(now){const dt=Math.min(.1,(now-last)/1000);last=now;
-  if(pts.length){if(playing){T+=dt*(+$('spd').value);if(T>=tEnd){T=tEnd;playing=false;$('play').textContent='Play';}}update();}
+  if(pts.length){if(playing){T+=dt*(+$('spd').value);if(T>=tEnd){T=tEnd;playing=false;$('play').textContent='Launch';}}update();}
   controls.update();renderAll();if(rec&&tel)compose();if(rec&&T>=tEnd&&!rec.end)rec.end=now+1500;if(rec&&rec.end&&now>rec.end)stopRec();requestAnimationFrame(frame);}
 // resize
 function resize(){renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();}
