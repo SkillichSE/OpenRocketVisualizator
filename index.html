@@ -16,6 +16,9 @@
 <div id="msg">Open the menu and load a CSV</div>
 <aside id="panel"><header><b>Setup</b><button id="min" title="Close (M)">✕</button></header><div id="pbody">
 <section class="main">
+<div class="grp"><span class="gt">Demo</span>
+<button id="demoBtn" class="wide">Load demo flight</button>
+<div class="st">da3.csv + da.obj · 52.99141, 62.99972</div></div>
 <div class="grp"><span class="gt">1 Flight CSV</span>
 <div class="blk"><input type="file" id="fcsv" accept=".csv,.txt"><label class="btn" for="fcsv">Choose CSV</label></div>
 <div class="st" id="stF">No flight loaded</div></div>
@@ -52,7 +55,7 @@
 <label class="ck"><input type="checkbox" id="autohide" checked><span>Auto-hide buttons while playing</span></label>
 </details>
 <div class="foot"><button id="wipe" class="wide">Reset all saved data</button>
-<p>Everything is saved automatically in this browser<br>Drop .csv / .obj / .mtl files anywhere<br>Keys: Space play · M menu · F fullscreen · ← → ±5 s</p></div>
+<p>Made by Ski's Team</p></div>
 </div></aside>
 <div id="mm"><div id="mh"><b>Launch site</b><input id="mq" placeholder="Search a place or type lat, lon"><button id="mg">Search</button><button id="mu">Satellite / Streets</button><button id="mok">Use this location</button><button id="mc">Cancel</button></div>
 <div id="mo"><label>Latitude<input id="lat" placeholder="Latitude"></label><label>Longitude<input id="lon" placeholder="Longitude"></label>
@@ -82,6 +85,7 @@
 <script src="js/playback.js"></script>
 <script src="js/recorder.js"></script>
 <script src="js/picker.js"></script>
+<script src="js/demo-data.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/store.js"></script>
 </body></html>

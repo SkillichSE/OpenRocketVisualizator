@@ -56,3 +56,9 @@ addEventListener('contextmenu',e=>{const r=pipRect;if(!r||pipHidden||$('bmode').
 // double-click the 3D view or press R: reset the camera
 renderer.domElement.addEventListener('dblclick',resetView);
 addEventListener('keydown',e=>{if(e.code==='KeyR'&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName))resetView();});
+
+// demo button: built-in csv + obj + launch site
+$('demoBtn').onclick=()=>{mtlInfo=null;dropModel('mtl');keepModel('obj','da.obj',DEMO.obj);loadOBJ(DEMO.obj);
+  $('lat').value=DEMO.lat;$('lon').value=DEMO.lon;if($('prov').value==='none'){$('prov').value='esri';$('keyw').style.display='none';}
+  loadCSV(DEMO.csv);applyObj();keepCSV('da3.csv',DEMO.csv);updSite();syncSel();buildMap();
+  $('panel').classList.add('min');T=pts.length?pts[0].t:0;playing=false;};
