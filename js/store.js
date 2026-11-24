@@ -1,5 +1,5 @@
 // saved setting ids
-const LSK='rf3d.v1',IDS=['axis','len','exact','inside','mk','lat','lon','prov','key','km','sc','bmode','cview','stab','cfov','ctilt','psz','spd','cam','mname','autohide'];
+const LSK='rf3d.v1',IDS=['axis','len','exact','inside','mk','lat','lon','prov','key','km','sc','bmode','cview','stab','cfov','ctilt','psz','spd','cam','mname','autohide','tm'];
 let ready=false;
 // indexeddb for big files
 const idb=new Promise(r=>{try{const q=indexedDB.open('rf3d',1);q.onupgradeneeded=()=>q.result.createObjectStore('kv');q.onsuccess=()=>r(q.result);q.onerror=()=>r(null);}catch(e){r(null);}});
@@ -24,7 +24,7 @@ $('wipe').onclick=async()=>{if(!confirm('Delete all saved settings and files fro
 (async()=>{let s=null;try{s=JSON.parse(localStorage.getItem(LSK));}catch(e){}
   try{if(s){IDS.forEach(i=>{if(s[i]!=null){const e=$(i);if(e.type==='checkbox')e.checked=!!s[i];else e.value=s[i];}});
       $('keyw').style.display=$('prov').value==='google'?'block':'none';$('panel').classList.toggle('min',!s.menu);
-      Object.entries(s.det||{}).forEach(([k,v])=>{const d=$(k);if(d)d.open=v;});keepSc=true;$('mname').oninput();camSync();updSite();}
+      Object.entries(s.det||{}).forEach(([k,v])=>{const d=$(k);if(d)d.open=v;});keepSc=true;$('tm').onchange();$('mname').oninput();camSync();updSite();}
     const [csv,demo,obj,mtl]=await Promise.all(['csv','demo','obj','mtl'].map(k=>kv('get',k)));
     if(mtl){mtlInfo=parseMTL(mtl.text);setSt('stM',mtl.name);}
     if(obj){loadOBJ(obj.text);setSt('stM',obj.name+(mtl?' + '+mtl.name:''));}

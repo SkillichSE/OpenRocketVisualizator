@@ -1,11 +1,10 @@
 // play and pause
-function togglePlay(){if(!pts.length)return;if(T>=tEnd)T=pts[0].t;playing=!playing;$('play').textContent=playing?'Pause':'Launch';}
-$('play').onclick=togglePlay;
+function togglePlay(){if(!pts.length)return;if(T>=tEnd)T=pts[0].t;playing=!playing;}
 // keyboard shortcuts
 addEventListener('keydown',e=>{if(/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)&&e.target.type!=='range')return;
   if(e.code==='Space'){e.preventDefault();togglePlay();}
   else if(e.code==='KeyC')toggleCam();
-  else if(e.code==='KeyM')$('gear').click();
+  else if(e.code==='KeyT')$('tm').click();else if(e.code==='KeyD')$('dBtn').click();else if(e.code==='KeyM')$('gear').click();
   else if(e.code==='KeyF'){document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen();}
   else if(pts.length&&(e.code==='ArrowLeft'||e.code==='ArrowRight')){e.preventDefault();T=Math.min(tEnd,Math.max(pts[0].t,T+(e.code==='ArrowLeft'?-5:5)));}});
 // hide buttons when idle
@@ -13,8 +12,9 @@ let idleT=0;const wake=()=>{document.body.classList.remove('idle');clearTimeout(
 ['mousemove','mousedown','touchstart','keydown'].forEach(n=>addEventListener(n,wake,{passive:true}));wake();
 // mission name
 $('mname').oninput=()=>{$('bn').textContent=$('mname').value.trim()||'Rocket Flight 3D';};
-// seek bar
-$('seek').oninput=e=>{if(pts.length)T=pts[0].t+(tEnd-pts[0].t)*e.target.value/1000;};
+$('hT').onclick=togglePlay;
+$('tm').onchange=()=>document.body.classList.toggle('notm',!$('tm').checked);$('tm').onchange();
+$('dBtn').onclick=()=>$('ch').classList.toggle('on');
 // menu toggle
 $('min').onclick=$('gear').onclick=()=>$('panel').classList.toggle('min');
 // load csv file

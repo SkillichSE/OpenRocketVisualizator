@@ -24,9 +24,9 @@ function loadCSV(text){const {head,rows,events}=parseCSV(text);
       e=(r[ci.lon]-g0[1])*111320*Math.cos(g0[0]*Math.PI/180);n=(r[ci.lat]-g0[0])*mlat;}
     else if(ci.ld>=0){const d=r[ci.ld],a=(ci.ldir>=0?r[ci.ldir]:0)*Math.PI/180;e=d*Math.sin(a);n=d*Math.cos(a);}
     if(![t,e,n,h].every(okv))return;
-    const g=k=>k>=0&&okv(r[k])?r[k]:null;P.push({t,e,n,h,zen:g(ci.zen),az:g(ci.az),th:g(ci.th)||0,rr:g(ci.roll)||0,spd:g(ci.sp)});});
+    const g=k=>k>=0&&okv(r[k])?r[k]:null;P.push({t,e,n,h,zen:g(ci.zen),az:g(ci.az),th:g(ci.th)||0,rr:g(ci.roll)||0,spd:g(ci.sp),c:r});});
   if(gpsOnly&&g0)csvLL=g0;
-  setPoints(P,events);}
+  heads=head;setPoints(P,events);}
 // launch site origin
 function setOrigin(){const a=parseFloat($('lat').value),b=parseFloat($('lon').value);
   if(isFinite(a)&&isFinite(b)){lat0=a;lon0=b;}else if(csvLL){lat0=csvLL[0];lon0=csvLL[1];}else{lat0=lon0=null;}
@@ -41,6 +41,7 @@ function setPoints(P,evIn){
   let roll=0,prev=UP.clone(),best=0;
   P.forEach((p,i)=>{const a=P[Math.max(0,i-1)],b=P[Math.min(P.length-1,i+1)],dt=(b.t-a.t)||1;
     p.vel=b.v.clone().sub(a.v).divideScalar(dt);p.sp=p.spd!==null?p.spd:p.vel.length();if(i)roll+=p.rr*(p.t-a.t)*Math.PI/180;p.roll=roll;if(p.sp>P[best].sp)best=i;});
+  P.forEach((p,i)=>{const a=P[Math.max(0,i-1)],b=P[Math.min(P.length-1,i+1)],dt=(b.t-a.t)||1;p.ac=b.vel.clone().sub(a.vel).divideScalar(dt).add(new THREE.Vector3(0,9.80665,0)).length()/9.80665;});
 // detect zenith meaning
   let elev=true;const q=P[best];if(q.zen!==null&&q.vel.length()>1){const tv=Math.acos(Math.min(1,Math.max(-1,q.vel.y/q.vel.length())))*180/Math.PI;elev=Math.abs((90-q.zen)-tv)<Math.abs(q.zen-tv);}
 // nose direction per point
@@ -72,6 +73,6 @@ function setPoints(P,evIn){
 // timeline event ticks
   const tk=$('ticks'),T0=P[0].t,span=(tEnd-T0)||1;tk.innerHTML='';evT=[];
   if(maxThr>1){let bq=0,bt;P.forEach(p=>{if(p.t<=ev.APOGEE&&p.t>T0+.5){const q=1.225*Math.exp(-p.h/8500)*p.sp*p.sp;if(q>bq){bq=q;bt=p.t;}}});if(bt!==undefined&&bt<(ev.BURNOUT??ev.APOGEE)+30)ev.MAXQ=bt;}
-  [['LIFTOFF',T0],['MAX Q',ev.MAXQ],['MECO',ev.BURNOUT],['APOGEE',ev.APOGEE],['PARACHUTE',ev.RECOVERY_DEVICE_DEPLOYMENT],['LANDING',ev.GROUND_HIT]].filter(x=>x[1]!==undefined).forEach(([n,t],i)=>{const d=document.createElement('button');d.className='tick'+(i%2?'':' up');d.style.left=100*(t-T0)/span+'%';d.innerHTML='<i></i><span>'+n+'</span>';d.title=n+' T+'+(t-T0).toFixed(1)+' s';d.onclick=()=>{T=t;};evT.push([n,t,d]);tk.appendChild(d);});
+  [['LIFTOFF',T0],['MAX Q',ev.MAXQ],['MECO',ev.BURNOUT],['APOGEE',ev.APOGEE],['PARACHUTE',ev.RECOVERY_DEVICE_DEPLOYMENT],['LANDING',ev.GROUND_HIT]].filter(x=>x[1]!==undefined).sort((x,y)=>x[1]-y[1]).forEach(([n,t])=>{const d=document.createElement('button');d.className='tick';d.innerHTML='<i></i><span>'+n+'</span>';d.title=n+' T+'+(t-T0).toFixed(1)+' s';d.onclick=()=>{T=t;};evT.push([n,t,d,{vis:true,up:true}]);tk.appendChild(d);});tlReset();buildTel();
   setOrigin();let note='';if(csvLL&&!isFinite(parseFloat($('lat').value))&&Math.abs(csvLL[0]-28.61)<.01&&Math.abs(csvLL[1]+80.6)<.02)note=' CSV start is the default OpenRocket site (Cape Canaveral): enter your own coordinates and press Update map.';
   msg(`${P.length} points, apogee ${maxAlt.toFixed(0)} m, ${(tEnd-P[0].t).toFixed(0)} s.${note}`);buildMap(note);}

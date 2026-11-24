@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rocket Flight 3D</title>
+<meta name="description" content="3D rocket flight replay from OpenRocket or GPS data, with SpaceX-style telemetry and video export.">
+<meta name="theme-color" content="#000000"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23000'/%3E%3Cpath d='M16 4l5 10v10l-3-2h-4l-3 2V14z' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{--w:#fff;--m:rgba(255,255,255,.62);--l:rgba(255,255,255,.3)}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#000;color:var(--w);font:500 14px/1.2 "Barlow","D-DIN","DIN Alternate","Helvetica Neue",Arial,sans-serif;letter-spacing:.06em;text-transform:uppercase;overflow:hidden}
+#view{position:fixed;inset:0}
+#scrim,#scrimT{position:fixed;left:0;right:0;pointer-events:none}
+#scrim{bottom:0;height:240px;background:linear-gradient(transparent,rgba(0,0,0,.88))}
+#scrimT{top:0;height:110px;background:linear-gradient(rgba(0,0,0,.7),transparent)}
+button,select,input{font:inherit;letter-spacing:inherit;text-transform:inherit;color:var(--w)}
+button,select{background:transparent;border:1px solid var(--l);border-radius:0;padding:8px 14px;cursor:pointer}
+button:hover,select:hover{border-color:var(--w);background:rgba(255,255,255,.1)}
+option{background:#000;color:#fff}
+#ctl{position:fixed;right:20px;top:16px;display:flex;gap:8px}#camBtn{display:flex;align-items:center;gap:8px;padding:8px 10px;font-size:11px;letter-spacing:.14em}
+#msg{position:fixed;left:50%;top:22px;transform:translateX(-50%);max-width:40%;text-align:center;text-transform:none;letter-spacing:.02em;color:var(--m);font-size:13px;line-height:1.3;pointer-events:none}
+#foot{position:fixed;left:28px;right:28px;bottom:22px;display:grid;grid-template-columns:1fr minmax(320px,46%) 1fr;gap:28px;align-items:end;pointer-events:none}
+.tel small{display:block;color:var(--m);font-size:11px;letter-spacing:.16em}
+.tel b{font-size:46px;font-weight:600;letter-spacing:.02em;font-variant-numeric:tabular-nums}
+.tel u{text-decoration:none;font-size:14px;margin-left:8px;color:var(--m)}
+.tel .s{margin-top:6px}.tel .s span{color:var(--w);font-variant-numeric:tabular-nums}
+.tel.r{text-align:right}
+#mid{text-align:center}
+#hP{font-size:12px;color:var(--m);letter-spacing:.24em}
+#hT{pointer-events:auto;display:block;margin:6px auto 0;border:1px solid transparent;background:none;padding:2px 16px;font-size:40px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:.08em;cursor:pointer;transition:background .2s}
+#hT:hover{background:rgba(255,255,255,.08);border-color:transparent}
+#hT.go{border-color:var(--w);letter-spacing:.34em;font-size:30px;padding:9px 40px;animation:pl 2.2s infinite}
+@keyframes pl{50%{box-shadow:0 0 20px rgba(255,255,255,.4)}}
+#track{position:relative;height:48px;margin-top:8px;pointer-events:auto;touch-action:none;cursor:pointer}
+#track:before{content:"";position:absolute;left:0;right:0;top:24px;height:2px;background:var(--l)}
+#fill{position:absolute;left:0;top:24px;height:2px;background:var(--w);width:0}
+#head{position:absolute;top:16px;width:3px;height:18px;margin-left:-1px;background:#fff;pointer-events:none;z-index:3}
+#ticks{position:absolute;inset:0;z-index:2;pointer-events:none}
+.tick{position:absolute;top:0;transform:translateX(-50%);pointer-events:auto;border:0;padding:0;background:transparent;height:48px;width:18px}
+.tick:hover{background:transparent}
+.tick i{position:absolute;left:50%;top:20px;width:8px;height:8px;margin-left:-4px;border:1px solid #fff;background:#000;transform:rotate(45deg)}
+.tick.done i{background:#fff}
+.tick span{position:absolute;left:50%;transform:translateX(-50%);top:36px;font-size:10px;color:var(--m);transition:opacity .2s;white-space:nowrap;letter-spacing:.14em}
+.tick.up span{top:2px}.tick.nol span{opacity:0}.tick:hover span{opacity:1;color:#fff}
+#pip{position:fixed;display:none;border:1px solid var(--l);pointer-events:none}
+#pip span{position:absolute;left:50%;transform:translateX(-50%);top:8px;font-size:11px;font-weight:600;letter-spacing:.22em;text-shadow:0 1px 4px #000;white-space:nowrap}
+#pip span:before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#f33;margin-right:8px}
+/* map picker */
+#mm{position:fixed;inset:0;z-index:50;background:#000;display:none;flex-direction:column}#mm.on{display:flex}
+#mh{display:flex;gap:8px;padding:12px 16px;align-items:center;flex-wrap:wrap}#mh b{letter-spacing:.3em;font-size:13px;margin-right:8px}
+#mq{flex:1;min-width:180px;background:rgba(255,255,255,.06);border:1px solid var(--l);padding:8px 10px}
+#mmap{flex:1;position:relative;z-index:0;background:#0a0a0a}#mi{padding:10px 16px;color:var(--m);font-size:12px;text-transform:none;letter-spacing:.04em}
+@media(max-width:800px){#foot{grid-template-columns:1fr 1fr;left:12px;right:12px}#mid{grid-column:1/-1;order:-1}.tel b{font-size:28px}#hT{font-size:30px}#brand{display:none}#msg{max-width:90%;top:62px}}
+
+/* top bar and panel */
+#top{position:fixed;left:20px;top:16px;display:flex;gap:16px;align-items:center;transition:opacity .4s}
+#ctl{transition:opacity .4s}
+#gear{padding:8px 10px;display:grid;place-items:center}
+#brand{display:flex;align-items:center;gap:12px;font-weight:600;letter-spacing:.38em;font-size:14px}
+body.idle #top,body.idle #ctl{opacity:0;pointer-events:none}body.idle{cursor:none}
+#panel{position:fixed;left:0;top:0;bottom:0;width:340px;max-width:100%;z-index:20;display:flex;flex-direction:column;background:rgba(0,0,0,.9);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-right:1px solid var(--l);transition:transform .25s}
+#panel.min{transform:translateX(-102%);pointer-events:none}
+#panel header{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;border-bottom:1px solid var(--l);font-size:13px;letter-spacing:.3em}
+#panel header button{padding:3px 9px}
+#pbody{flex:1;overflow:auto;scrollbar-width:thin;scrollbar-color:#444 transparent}
+#panel details{border-top:1px solid rgba(255,255,255,.14);padding:0 18px}
+#panel summary{list-style:none;cursor:pointer;padding:15px 0;font-size:12px;letter-spacing:.22em;display:flex;justify-content:space-between}
+#panel summary::-webkit-details-marker{display:none}
+#panel summary:after{content:"+";color:var(--m);font-size:16px;line-height:12px}
+#panel details[open] summary:after{content:"\2212"}
+#panel details[open]{padding-bottom:16px}
+.lb{display:block;margin:12px 0 4px;color:var(--m);font-size:11px;letter-spacing:.14em}
+.ck{display:grid;grid-template-columns:16px 1fr;align-items:center;column-gap:10px;margin:12px 0 0;font-size:12px;line-height:1.3;color:var(--w);cursor:pointer;text-transform:none;letter-spacing:.03em}
+.ck span{min-width:0}
+#panel input:not([type=range]):not([type=file]),#panel select{width:100%;background:rgba(255,255,255,.06);border:1px solid var(--l);border-radius:0;padding:8px}
+#panel input:focus,#panel select:focus{outline:0;border-color:var(--w)}
+#panel input[type=checkbox]{width:16px;height:16px;min-width:16px;margin:0;padding:0;accent-color:#fff}
+#panel input[type=range]{width:100%;padding:0;accent-color:#fff;background:none;border:0}
+#panel input[type=file]{display:none}
+.row{display:flex;gap:8px}.row>*{flex:1;min-width:0}
+.blk{display:flex;gap:8px;margin-top:2px}.blk>*{flex:1;text-align:center}
+.btn{display:block;border:1px solid var(--l);padding:8px 14px;cursor:pointer}.btn:hover{border-color:var(--w);background:rgba(255,255,255,.1)}
+.wide{width:100%;margin-top:8px}
+.st{margin-top:8px;font-size:11px;color:var(--m);text-transform:none;letter-spacing:.03em;word-break:break-all}
+#panel #pick.on{border-color:#fff;background:rgba(255,255,255,.15)}
+.foot{padding:16px 18px}.foot p{margin:12px 0 0;font-size:11px;line-height:1.6;color:var(--m);text-transform:none;letter-spacing:.03em}
+@media(max-width:800px){#panel{width:100%}}
+
+
+/* main block */
+#panel .main{padding:6px 18px 14px}
+.grp{padding:12px 0;border-bottom:1px solid rgba(255,255,255,.14)}.grp:last-child{border-bottom:0}
+.gt{display:block;font-size:12px;letter-spacing:.22em;margin-bottom:8px}
+.grp .row{margin-top:8px}.grp select,.grp>input{margin-top:8px}
+.sub{margin:18px 0 2px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1);font-size:11px;letter-spacing:.22em;color:var(--m)}
+.sub:first-of-type{border-top:0;margin-top:0}
+
+/* top bar */
+#top{max-width:calc(100% - 420px)}#brand span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#msg{top:64px;max-width:min(60%,640px)}
+@media(max-width:800px){#ctl{right:12px;top:16px}#msg{top:62px}#top{max-width:calc(100% - 24px)}}
+
+/* picker options bar */
+#mo{display:flex;gap:10px;flex-wrap:wrap;padding:0 16px 12px;align-items:flex-end}
+#mo label{display:block;flex:1;min-width:130px;color:var(--m);font-size:11px;letter-spacing:.14em}
+#mm input,#mm select{width:100%;margin-top:4px;background:rgba(255,255,255,.06);border:1px solid var(--l);border-radius:0;padding:8px}
+#mh input{width:auto}#mh #mq{flex:1}
+#mm input:focus,#mm select:focus{outline:0;border-color:var(--w)}
+
+/* zoom row */
+#zl{display:flex;justify-content:flex-end;align-items:center;gap:6px;height:20px;pointer-events:none}#zl button{pointer-events:auto;padding:0 8px;font-size:10px;line-height:18px;border-color:rgba(255,255,255,.2);color:var(--m)}#zv{font-size:10px;color:var(--w);letter-spacing:.14em;margin-right:4px}
+/* telemetry stacks */
+.stk{position:fixed;top:96px;width:200px;display:flex;flex-direction:column;gap:13px;pointer-events:none}
+#tl{left:28px}#tr{right:28px;text-align:right}
+.m{border-left:1px solid var(--l);padding-left:11px}#tr .m{border-left:0;border-right:1px solid var(--l);padding:0 11px 0 0}
+.m small{display:block;color:var(--m);font-size:10px;letter-spacing:.2em}
+.m b{font-size:22px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.m u{text-decoration:none;font-size:11px;margin-left:6px;color:var(--m)}
+.m i{display:block;width:80px;height:2px;margin-top:5px;background:rgba(255,255,255,.2)}#tr .m i{margin-left:auto}.m em{display:block;height:100%;width:0;background:#fff}
+body.notm .stk{display:none}
+#ch{position:fixed;right:20px;top:60px;width:270px;max-height:55vh;overflow:auto;display:none;padding:8px 12px;background:rgba(0,0,0,.82);backdrop-filter:blur(10px);border:1px solid var(--l);z-index:10;font-size:11px;letter-spacing:.08em;scrollbar-width:thin}#ch.on{display:block}
+#ch div{display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.08)}#ch span{color:var(--m)}#ch b{font-weight:600;font-variant-numeric:tabular-nums}
+#dBtn{font-size:11px;letter-spacing:.14em;padding:8px 12px}
+@media(max-width:800px){.stk{display:none}#hT.go{font-size:24px;padding:8px 28px}}
+</style>
+</head><body>
+<div id="view"></div><div id="scrimT"></div><div id="scrim"></div>
+<div id="pip"><span>ONBOARD CAM</span></div>
+<div id="top"><button id="gear" title="Menu (M)" aria-label="Menu"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M2 4.5h14M2 9h14M2 13.5h14" stroke="#fff" stroke-width="1.5"/></svg></button>
+<div id="brand"><svg width="16" height="20" viewBox="0 0 16 20"><path d="M8 0l4 8v8l-2.5-1.5h-3L4 16V8z" fill="#fff"/><path d="M4 12l-3 5 3-1zM12 12l3 5-3-1z" fill="#fff"/></svg><span id="bn">Rocket Flight 3D</span></div></div>
+<div id="ctl"><button id="camBtn" title="Camera: free or follow (C)" aria-label="Camera"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#fff" stroke-width="1.4"><rect x="1.5" y="4.5" width="15" height="10" rx="1"/><circle cx="9" cy="9.5" r="2.8"/><path d="M6 4.5l1-2h4l1 2"/></svg><span id="camL">Free</span></button><button id="dBtn" title="All CSV channels (D)">Data</button></div>
+<div id="msg">Open the menu and load a CSV</div>
+<aside id="panel"><header><b>Setup</b><button id="min" title="Close (M)">✕</button></header><div id="pbody">
+<section class="main">
+<div class="grp"><span class="gt">1 Flight CSV</span>
+<div class="blk"><input type="file" id="fcsv" accept=".csv,.txt"><label class="btn" for="fcsv">Choose CSV</label></div>
+<div class="st" id="stF">No flight loaded</div></div>
+<div class="grp"><span class="gt">2 Rocket model OBJ</span>
+<div class="blk"><input type="file" id="fobj" accept=".obj,.mtl" multiple><label class="btn" for="fobj">Choose OBJ + MTL</label></div>
+<div class="st" id="stM">Default model</div></div>
+<div class="grp"><span class="gt">3 Map</span>
+<button id="pick" class="wide">Pick launch site</button>
+<div class="st" id="stL">No launch site</div></div>
+<div class="grp"><span class="gt">4 Playback</span>
+<button id="exp" class="wide">Export video</button>
+<div class="row"><div><span class="lb">Speed</span><select id="spd"><option value="0.25">×0.25</option><option value="0.5">×0.5</option><option value="1" selected>×1</option><option value="4">×4</option><option value="10">×10</option><option value="20">×20</option></select></div>
+<div><span class="lb">Camera</span><select id="cam"><option value="free">Free</option><option value="follow">Follow rocket</option></select></div></div></div>
+</section>
+<details id="s-opt"><summary>Options</summary>
+<div class="sub">Flight</div>
+<span class="lb">Mission name</span><input id="mname" placeholder="Rocket Flight 3D" maxlength="40">
+<div class="sub">Model</div>
+<div class="row"><div><span class="lb">Nose axis</span><select id="axis"><option value="auto">Auto</option><option>+X</option><option>-X</option><option>+Y</option><option>-Y</option><option>+Z</option><option>-Z</option></select></div>
+<div><span class="lb">Length, cm</span><input id="len" type="number" placeholder="Auto"></div>
+<div><span class="lb">Scale ×</span><input id="sc" type="number" min="1" value="20"></div></div>
+<label class="ck"><input type="checkbox" id="exact" checked><span>Exact export (all parts, original colors)</span></label>
+<label class="ck"><input type="checkbox" id="inside"><span>Show internals (transparent body)</span></label>
+<div class="sub">Onboard camera</div>
+<div class="row"><div><span class="lb">Window</span><select id="bmode"><option value="pip">Corner</option><option value="full">Full screen</option><option value="off">Off</option></select></div>
+<div><span class="lb">Direction</span><select id="cview"><option value="fwd">Forward</option><option value="side">Side</option><option value="down">Down</option><option value="back">Back</option></select></div></div>
+<label class="ck"><input type="checkbox" id="stab" checked><span>Stabilize camera roll</span></label>
+<span class="lb">Field of view</span><input id="cfov" type="range" min="30" max="120" value="75">
+<span class="lb">Tilt</span><input id="ctilt" type="range" min="-90" max="90" value="0">
+<span class="lb">Corner window size</span><input id="psz" type="range" min="20" max="60" value="34">
+<div class="sub">Display</div>
+<label class="ck"><input type="checkbox" id="tm" checked><span>Show telemetry panels (T)</span></label>
+<label class="ck"><input type="checkbox" id="mk"><span>Show start / apogee / landing markers</span></label>
+<label class="ck"><input type="checkbox" id="autohide" checked><span>Auto-hide buttons while playing</span></label>
+</details>
+<div class="foot"><button id="wipe" class="wide">Reset all saved data</button>
+<p>Everything is saved automatically in this browser<br>Drop .csv / .obj / .mtl files anywhere<br>Keys: Space play · M menu · F fullscreen · ← → ±5 s</p></div>
+</div></aside>
+<div id="mm"><div id="mh"><b>Launch site</b><input id="mq" placeholder="Search a place or type lat, lon"><button id="mg">Search</button><button id="mu">Satellite / Streets</button><button id="mok">Use this location</button><button id="mc">Cancel</button></div>
+<div id="mo"><label>Latitude<input id="lat" placeholder="Latitude"></label><label>Longitude<input id="lon" placeholder="Longitude"></label>
+<label>Map style<select id="prov"><option value="esri">Satellite (Esri)</option><option value="esrist">Streets (Esri)</option><option value="esritopo">Topo (Esri)</option><option value="carto">Dark (CARTO)</option><option value="osm">OpenStreetMap</option><option value="google">Google Static Maps (key required)</option><option value="none">No map</option></select></label>
+<label id="keyw" style="display:none">Google API key<input id="key" placeholder="Google Maps API key"></label>
+<label>Map size, km<input id="km" type="number" placeholder="Auto"></label></div>
+<div id="mmap"></div><div id="mi">Click anywhere on the world map to place the launch site</div></div>
+<div id="tl" class="stk"></div><div id="tr" class="stk"></div>
+<div id="ch"></div>
+<div id="foot">
+<div class="tel"><small>Speed</small><div><b id="hV">0</b><u>km/h</u></div><small class="s">Thrust <span id="hF">0</span> N</small></div>
+<div id="mid"><div id="hP">Standby</div><button id="hT">T+ 00:00:00</button>
+<div id="track"><div id="fill"></div><div id="ticks"></div><div id="head"></div></div><div id="zl"><span id="zv"></span><button id="zo" title="Zoom out">−</button><button id="zi" title="Zoom in (or scroll over the timeline)">+</button><button id="zr" title="Reset zoom (double-click timeline)">Fit</button></div></div>
+<div class="tel r"><small>Altitude</small><div><b id="hA">0</b><u id="uA">m</u></div><small class="s">Apogee <span id="hM">0</span> <span id="uM">m</span></small></div>
+</div>
+<noscript><div style="position:fixed;inset:0;display:grid;place-items:center;background:#000;z-index:99">JavaScript is required.</div></noscript>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+// check libraries and webgl and show errors
+(function(){const out=t=>{const m=document.getElementById('msg');if(m){m.textContent=t;m.style.color='#ff6b6b';}console.error(t);};
+  addEventListener('error',e=>out('Error: '+(e.message||'unknown')));
+  addEventListener('unhandledrejection',e=>out('Error: '+((e.reason&&e.reason.message)||e.reason)));
+  if(!window.THREE||!THREE.OrbitControls){out('Could not load the 3D libraries. Check your internet connection and reload.');return;}
+  try{const c=document.createElement('canvas');if(!(c.getContext('webgl2')||c.getContext('webgl')))out('WebGL is not available in this browser.');}catch(e){out('WebGL is not available in this browser.');}
+})();
+</script>
+<script>
+// helpers and shared vectors
+const UP=new THREE.Vector3(0,1,0),DOWN=new THREE.Vector3(0,-1,0),$=id=>document.getElementById(id),msg=t=>{const m=$('msg');m.textContent=t;m.style.color='';};
+// shared flight state
+let evT=[],tel=null,rec=null,pipR=null,keepSc=false;const mlat=110540;let mlon=111320,lat0=null,lon0=null,csvLL=null;
+// more shared state
+let pts=[],ev={},T=0,tEnd=0,maxAlt=0,maxThr=0,ext=500,playing=false,objInfo=null,refDiam=null,modelLen=1.17,bodyR=.03,drop,smoke=[];
+
+// renderer
+const renderer=new THREE.WebGLRenderer({antialias:true,logarithmicDepthBuffer:true});
+renderer.setPixelRatio(devicePixelRatio);renderer.outputEncoding=THREE.sRGBEncoding;$('view').appendChild(renderer.domElement);
+// scene and cameras
+const scene=new THREE.Scene();scene.background=new THREE.Color(0xa9c4e8);scene.fog=new THREE.FogExp2(0xa9c4e8,0.00003);
+const camera=new THREE.PerspectiveCamera(50,1,.5,2e6),camB=new THREE.PerspectiveCamera(75,16/9,.01,2e6);camera.position.set(300,200,300);
+// orbit controls
+const controls=new THREE.OrbitControls(camera,renderer.domElement);controls.enableDamping=true;
+// lights
+scene.add(new THREE.HemisphereLight(0xffffff,0x556677,.95));const sun=new THREE.DirectionalLight(0xffffff,.9);sun.position.set(1,2,1);scene.add(sun);
+// sky dome
+const sky=(()=>{const c=document.createElement('canvas');c.width=2;c.height=256;const x=c.getContext('2d'),g=x.createLinearGradient(0,0,0,256);
+  g.addColorStop(0,'#1d4f9c');g.addColorStop(.5,'#6ea0dc');g.addColorStop(.52,'#a9c4e8');g.addColorStop(1,'#a9c4e8');x.fillStyle=g;x.fillRect(0,0,2,256);
+  const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;
+  const m=new THREE.Mesh(new THREE.SphereGeometry(9e5,24,16),new THREE.MeshBasicMaterial({map:t,side:THREE.BackSide,fog:false,depthWrite:false}));m.renderOrder=-100;scene.add(m);return m;})();
+// ground disc
+const disc=new THREE.Mesh(new THREE.CircleGeometry(3e5,48).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0x6a7a58}));disc.position.y=-3;disc.renderOrder=-200;scene.add(disc);
+// scene groups
+const rocket=new THREE.Group(),holder=new THREE.Group(),world=new THREE.Group(),mapGroup=new THREE.Group();rocket.add(holder);scene.add(rocket,world,mapGroup);
+</script>
+<script>
+// engine flame
+const flame=new THREE.Group();rocket.add(flame);
+const mkCone=(col,op)=>{const g=new THREE.ConeGeometry(1,1,16,1,true).rotateX(Math.PI).translate(0,-.5,0);
+  return new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:op,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide,fog:false}));};
+const fOut=mkCone(0xff6a14,.8),fIn=mkCone(0xfff0b0,.95);flame.add(fOut,fIn);
+// parachute
+const chute=new THREE.Group();(()=>{const R=.55,H=1.3;
+  const cm=new THREE.Mesh(new THREE.SphereGeometry(R,24,10,0,2*Math.PI,0,Math.PI/2),new THREE.MeshStandardMaterial({color:0xff7a2f,side:THREE.DoubleSide}));cm.position.y=H;chute.add(cm);
+  const pos=[];for(let i=0;i<10;i++){const a=i/10*2*Math.PI;pos.push(R*Math.cos(a),H,R*Math.sin(a),0,0,0);}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));chute.add(new THREE.LineSegments(g,new THREE.LineBasicMaterial({color:0xeeeeee})));})();
+chute.visible=false;scene.add(chute);
+// smoke texture
+const smokeTex=(()=>{const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d'),g=x.createRadialGradient(32,32,2,32,32,32);
+  g.addColorStop(0,'rgba(255,255,255,.9)');g.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=g;x.fillRect(0,0,64,64);return new THREE.CanvasTexture(c);})();
+
+// model helpers
+function clearHolder(){while(holder.children.length)holder.remove(holder.children[0]);}
+function setFlame(){flame.position.y=-modelLen/2;}
+// default rocket body
+function useDefault(){clearHolder();const g=new THREE.Group(),w=new THREE.MeshStandardMaterial({color:0xe8e8ee,roughness:.5}),r=new THREE.MeshStandardMaterial({color:0xd32f3f,roughness:.5});
+  const b=new THREE.Mesh(new THREE.CylinderGeometry(.03,.03,.9,24),w);b.position.y=-.135;const n=new THREE.Mesh(new THREE.ConeGeometry(.03,.27,24),r);n.position.y=.45;g.add(b,n);
+  for(let i=0;i<3;i++){const a=i*2*Math.PI/3,f=new THREE.Mesh(new THREE.BoxGeometry(.004,.14,.07),r);f.position.set(Math.cos(a)*.05,-.52,Math.sin(a)*.05);f.rotation.y=Math.PI/2-a;g.add(f);}
+  holder.add(g);holder.quaternion.identity();holder.scale.setScalar(1);modelLen=1.17;bodyR=.03;setFlame();}
+useDefault();
+
+// obj and mtl parsing
+let mtlInfo=null;
+function parseOBJ(t){const v=[],vn=[],G={};let cur='default',mat='';const ix=(s,n)=>{const i=parseInt(s);return i<0?n/3+i:i-1;};
+  for(const l of t.split(/\r?\n/)){
+    if(l[0]==='v'&&l[1]===' '){const p=l.trim().split(/\s+/);v.push(+p[1],+p[2],+p[3]);}
+    else if(l[0]==='v'&&l[1]==='n'){const p=l.trim().split(/\s+/);vn.push(+p[1],+p[2],+p[3]);}
+    else if(l[0]==='g'||l[0]==='o'){cur=l.slice(2).trim()||'default';}
+    else if(l.startsWith('usemtl')){mat=l.slice(6).trim();}
+    else if(l[0]==='f'&&l[1]===' '){const key=cur+(mat?'|'+mat:''),a=G[key]||(G[key]=Object.assign([],{mat,nrm:[]})),
+      idx=l.trim().split(/\s+/).slice(1).map(s=>{const q=s.split('/');return [ix(q[0],v.length),q[2]?ix(q[2],vn.length):-1];});
+      for(let k=1;k<idx.length-1;k++)for(const j of [idx[0],idx[k],idx[k+1]]){a.push(v[j[0]*3],v[j[0]*3+1],v[j[0]*3+2]);
+        if(a.nrm&&j[1]>=0&&vn.length)a.nrm.push(vn[j[1]*3],vn[j[1]*3+1],vn[j[1]*3+2]);else a.nrm=null;}}
+  }return G;}
+// read material colors
+function parseMTL(t){const M={};let c=null;for(const l of t.split(/\r?\n/)){const p=l.trim().split(/\s+/),k=p[0];
+  if(k==='newmtl')c=M[l.trim().slice(7).trim()]={};else if(c){if(k==='Kd')c.kd=[+p[1],+p[2],+p[3]];else if(k==='d')c.d=+p[1];else if(k==='Tr')c.d=1-p[1];}}return M;}
+// load picked model files
+async function loadModelFiles(fl){const isM=f=>/\.mtl$/i.test(f.name);fl=[...fl].sort((a,b)=>isM(b)-isM(a));
+  if(!fl.some(isM)&&fl.length){mtlInfo=null;dropModel('mtl');}
+  for(const f of fl){const t=await f.text();keepModel(isM(f)?'mtl':'obj',f.name,t);if(isM(f)){mtlInfo=parseMTL(t);if(objInfo)applyObj();}else loadOBJ(t);}}
+// read obj and get its bounds
+function loadOBJ(t){const G=parseOBJ(t),mn=[1e9,1e9,1e9],mx=[-1e9,-1e9,-1e9];let n=0;
+  for(const a of Object.values(G))for(let i=0;i<a.length;i+=3){n++;for(let k=0;k<3;k++){mn[k]=Math.min(mn[k],a[i+k]);mx[k]=Math.max(mx[k],a[i+k]);}}
+  if(!n)return msg('OBJ file is empty or has no faces');objInfo={G,mn,mx,cen:mn.map((m,k)=>(m+mx[k])/2)};applyObj();}
+// names of internal parts
+const INTERNAL=/inner tube|parachute|mass|motor|engine|j\d{3}/i;
+// orient scale and build meshes
+function applyObj(){if(!objInfo)return;clearHolder();const {G,mn,mx,cen}=objInfo,sel=$('axis').value;let ax,sg;
+  if(sel==='auto'){const d=mx.map((m,k)=>m-mn[k]);ax=d.indexOf(Math.max(...d));const o=[0,1,2].filter(k=>k!==ax),L=d[ax],ext2=[0,0];
+    for(const [nm,a] of Object.entries(G)){if(INTERNAL.test(nm))continue;for(let i=0;i<a.length;i+=3){const c=a[i+ax];const r=Math.max(Math.abs(a[i+o[0]]-cen[o[0]]),Math.abs(a[i+o[1]]-cen[o[1]]));
+      if(c>mx[ax]-.04*L)ext2[1]=Math.max(ext2[1],r);if(c<mn[ax]+.04*L)ext2[0]=Math.max(ext2[0],r);}}
+    sg=ext2[1]<=ext2[0]?1:-1;}else{ax='XYZ'.indexOf(sel[1]);sg=sel[0]==='-'?-1:1;}
+  const dir=new THREE.Vector3();dir.setComponent(ax,sg);holder.quaternion.setFromUnitVectors(dir,UP);
+  const o=[0,1,2].filter(k=>k!==ax),dimAx=mx[ax]-mn[ax];let rawR=0;
+  const bn=Object.keys(G).find(k=>/body/i.test(k));
+  for(const [nm,a] of Object.entries(G)){if(bn&&nm!==bn)continue;if(!bn&&/fin/i.test(nm))continue;for(let i=0;i<a.length;i+=3)rawR=Math.max(rawR,Math.hypot(a[i+o[0]]-cen[o[0]],a[i+o[1]]-cen[o[1]]));}
+  const lenCm=parseFloat($('len').value);let f=1,how='OBJ units = meters';
+  if(lenCm>0){f=lenCm/100/dimAx;how='from set length';}else if(refDiam&&rawR>0){f=refDiam/200/rawR;how='from CSV diameter';}
+  const ex=$('exact').checked,ins=$('inside').checked&&!ex;
+  for(const [nm,a] of Object.entries(G)){const inn=!ex&&INTERNAL.test(nm);if(inn&&!ins)continue;
+    const p=new Float32Array(a.length);for(let i=0;i<a.length;i++)p[i]=a[i]-cen[i%3];
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(p,3));if(a.nrm&&a.nrm.length===a.length)g.setAttribute('normal',new THREE.BufferAttribute(new Float32Array(a.nrm),3));else g.computeVertexNormals();
+    const md=mtlInfo&&a.mat&&mtlInfo[a.mat],col=md&&md.kd?new THREE.Color().setRGB(md.kd[0],md.kd[1],md.kd[2]).convertSRGBToLinear():/nose/i.test(nm)?0xd32f3f:/fin/i.test(nm)?0xa51d2a:/parachute/i.test(nm)?0xff9f43:inn?0x777c8a:0xeceff4;
+    holder.add(new THREE.Mesh(g,new THREE.MeshStandardMaterial({color:col,roughness:.5,metalness:.1,side:THREE.DoubleSide,transparent:(ins&&!inn)||(md&&md.d<1),opacity:md&&md.d<1?md.d:ins&&!inn?.28:1,depthWrite:!((ins&&!inn)||(md&&md.d<1))})));}
+  holder.scale.setScalar(f);modelLen=dimAx*f;bodyR=rawR>0?rawR*f:modelLen*.026;setFlame();autoScale();
+  msg(`Model: length ${(modelLen*100).toFixed(0)} cm (${how}), nose ${sg>0?'+':'-'}${'XYZ'[ax]}${mtlInfo?', MTL colors':'. Tip: load the .mtl together with the .obj for exact colors'}`);}
+// pick model scale from flight size
+function autoScale(){if(keepSc)return;$('sc').value=Math.round(Math.min(500,Math.max(1,ext*.03/modelLen)));}
+</script>
+<script>
+// split csv into header rows and events
+function parseCSV(t){const L=t.split(/\r?\n/).map(s=>s.trim()).filter(Boolean),all=L.join('\n');
+  const sep=(all.match(/;/g)||[]).length>(all.match(/,/g)||[]).length?';':',';let head=null;const rows=[],events={};
+  for(const l of L){const m=l.match(/^#\s*Event\s+(\w+)\s+occurred at t=([-\d.eE+]+)/);if(m){events[m[1]]=+m[2];continue;}
+    const cells=l.replace(/^#\s*/,'').split(sep);
+    if(!head&&cells.length>=3&&/[a-zа-я]/i.test(l)&&/time|lat|alt|lon|врем|высот|широт/i.test(l)&&cells.filter(c=>isNaN(+c.trim())).length>=cells.length/2){head=cells.map(c=>c.replace(/"/g,'').trim().toLowerCase());continue;}
+    if(l[0]==='#'||!head)continue;
+    const r=cells.map(c=>parseFloat(sep===';'?c.replace(',','.'):c));if(r.length>=head.length-1&&r.some(isFinite))rows.push(r);}
+  return {head,rows,events};}
+// map columns and build points
+function loadCSV(text){const {head,rows,events}=parseCSV(text);
+  if(!head||!rows.length)return msg('Could not parse CSV: a header row and numeric rows are required');
+  const col=re=>head.findIndex(h=>re.test(h));
+  const ci={t:col(/^(time|t\b|врем)/),lat:col(/^(latitude|lat\b|широт)/),lon:col(/^(longitude|lon\b|lng\b|долгот)/),alt:col(/^(altitude(?! above)|alt\b|высот|height)/),
+    e:col(/^position east/),n:col(/^position north/),ld:col(/^lateral distance/),ldir:col(/^lateral direction/),zen:col(/zenith|vertical orientation/),az:col(/azimuth|lateral orientation/),
+    sp:col(/^(total velocity|speed|скорост)/),th:col(/^(thrust \(n\)|thrust\b|тяга)/),roll:col(/^roll rate/),ref:col(/^reference length/)};
+  const hasLL=ci.lat>=0&&ci.lon>=0,okv=x=>isFinite(x);csvLL=null;
+  if(hasLL){const r=rows.find(r=>okv(r[ci.lat])&&okv(r[ci.lon])&&(r[ci.lat]||r[ci.lon]));if(r)csvLL=[r[ci.lat],r[ci.lon]];}
+  refDiam=ci.ref>=0&&okv(rows[0][ci.ref])?rows[0][ci.ref]:null;
+  const gpsOnly=!(ci.e>=0&&ci.n>=0)&&hasLL;let g0=null;const P=[];
+  rows.forEach((r,i)=>{const t=ci.t>=0?r[ci.t]:i*.1,h=ci.alt>=0?r[ci.alt]:0;let e=0,n=0;
+    if(ci.e>=0&&ci.n>=0){e=r[ci.e];n=r[ci.n];}
+    else if(hasLL){if(!okv(r[ci.lat])||!okv(r[ci.lon])||(!r[ci.lat]&&!r[ci.lon]))return;if(!g0)g0=[r[ci.lat],r[ci.lon]];
+      e=(r[ci.lon]-g0[1])*111320*Math.cos(g0[0]*Math.PI/180);n=(r[ci.lat]-g0[0])*mlat;}
+    else if(ci.ld>=0){const d=r[ci.ld],a=(ci.ldir>=0?r[ci.ldir]:0)*Math.PI/180;e=d*Math.sin(a);n=d*Math.cos(a);}
+    if(![t,e,n,h].every(okv))return;
+    const g=k=>k>=0&&okv(r[k])?r[k]:null;P.push({t,e,n,h,zen:g(ci.zen),az:g(ci.az),th:g(ci.th)||0,rr:g(ci.roll)||0,spd:g(ci.sp),c:r});});
+  if(gpsOnly&&g0)csvLL=g0;
+  heads=head;setPoints(P,events);}
+// launch site origin
+function setOrigin(){const a=parseFloat($('lat').value),b=parseFloat($('lon').value);
+  if(isFinite(a)&&isFinite(b)){lat0=a;lon0=b;}else if(csvLL){lat0=csvLL[0];lon0=csvLL[1];}else{lat0=lon0=null;}
+  if(lat0!==null)mlon=111320*Math.cos(lat0*Math.PI/180);}
+
+// prepare trajectory and scene objects
+function setPoints(P,evIn){
+  P=P.filter(p=>isFinite(p.t)).sort((a,b)=>a.t-b.t);if(P.length<2)return msg('At least 2 trajectory points are required');
+  {const h0=P[0].h;P.forEach(p=>p.h-=h0);}
+  P.forEach(p=>p.v=new THREE.Vector3(p.e,p.h,-p.n));
+// velocity speed and roll
+  let roll=0,prev=UP.clone(),best=0;
+  P.forEach((p,i)=>{const a=P[Math.max(0,i-1)],b=P[Math.min(P.length-1,i+1)],dt=(b.t-a.t)||1;
+    p.vel=b.v.clone().sub(a.v).divideScalar(dt);p.sp=p.spd!==null?p.spd:p.vel.length();if(i)roll+=p.rr*(p.t-a.t)*Math.PI/180;p.roll=roll;if(p.sp>P[best].sp)best=i;});
+  P.forEach((p,i)=>{const a=P[Math.max(0,i-1)],b=P[Math.min(P.length-1,i+1)],dt=(b.t-a.t)||1;p.ac=b.vel.clone().sub(a.vel).divideScalar(dt).add(new THREE.Vector3(0,9.80665,0)).length()/9.80665;});
+// detect zenith meaning
+  let elev=true;const q=P[best];if(q.zen!==null&&q.vel.length()>1){const tv=Math.acos(Math.min(1,Math.max(-1,q.vel.y/q.vel.length())))*180/Math.PI;elev=Math.abs((90-q.zen)-tv)<Math.abs(q.zen-tv);}
+// nose direction per point
+  P.forEach(p=>{if(p.zen!==null&&p.az!==null){const z=(elev?90-p.zen:p.zen)*Math.PI/180,az=p.az*Math.PI/180;p.d=new THREE.Vector3(Math.sin(z)*Math.sin(az),Math.cos(z),-Math.sin(z)*Math.cos(az));}
+    else if(p.sp>1&&p.vel.length()>.5)p.d=p.vel.clone().normalize();else p.d=prev.clone();prev=p.d;});
+// totals and events
+  pts=P;T=P[0].t;tEnd=P[P.length-1].t;maxAlt=P.reduce((m,p)=>Math.max(m,p.h),-1e9);maxThr=P.reduce((m,p)=>Math.max(m,p.th),0);
+  ev=Object.assign({},evIn);const ap=P.find(p=>p.h===maxAlt);
+  if(ev.APOGEE===undefined)ev.APOGEE=ap.t;if(ev.GROUND_HIT===undefined)ev.GROUND_HIT=tEnd;
+  if(ev.BURNOUT===undefined&&maxThr>1)ev.BURNOUT=P.filter(p=>p.th>1).pop().t;
+  if(ev.RECOVERY_DEVICE_DEPLOYMENT===undefined&&ev.EJECTION_CHARGE!==undefined)ev.RECOVERY_DEVICE_DEPLOYMENT=ev.EJECTION_CHARGE;
+// fit camera to flight
+  const box=new THREE.Box3();P.forEach(p=>box.expandByPoint(p.v));const size=box.getSize(new THREE.Vector3()),c=box.getCenter(new THREE.Vector3());
+  ext=Math.max(size.x,size.y,size.z,50);autoScale();
+// rebuild path lines
+  while(world.children.length){const o=world.children.pop();if(!o.isSprite&&o.geometry)o.geometry.dispose();o.material.dispose();}
+  const g1=new THREE.BufferGeometry();g1.setAttribute('position',new THREE.Float32BufferAttribute(P.flatMap(p=>[p.v.x,p.v.y,p.v.z]),3));
+  world.add(new THREE.Line(g1,new THREE.LineBasicMaterial({color:0x6b7bb0})),new THREE.Line(g1.clone(),new THREE.LineBasicMaterial({color:0xff8a3d})));
+  const gd=new THREE.BufferGeometry();gd.setAttribute('position',new THREE.Float32BufferAttribute(new Float32Array(6),3));
+  drop=new THREE.Line(gd,new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:.5}));world.add(drop);
+  const rad=ext*.003;[[P[0],0x34d17a],[ap,0xffd23f],[P[P.length-1],0xff4d5e]].forEach(([p,col])=>{const m=new THREE.Mesh(new THREE.SphereGeometry(rad,12,12),new THREE.MeshBasicMaterial({color:col}));m.position.copy(p.v);m.visible=$('mk').checked;m.userData.mk=1;world.add(m);});
+// exhaust smoke and ejection puff
+  smoke=[];let lt=-9;const sc0=+$('sc').value||1;
+  P.forEach(p=>{if(p.th>1&&p.t-lt>=.05){lt=p.t;smoke.push({t:p.t,v:p.v.clone().addScaledVector(p.d,-modelLen*sc0*.5),big:p.h<40?3:1});}});
+  if(ev.RECOVERY_DEVICE_DEPLOYMENT!==undefined){const d=P.reduce((m,p)=>Math.abs(p.t-ev.RECOVERY_DEVICE_DEPLOYMENT)<Math.abs(m.t-ev.RECOVERY_DEVICE_DEPLOYMENT)?p:m);smoke.push({t:d.t,v:d.v.clone(),big:2.5});}
+  if(smoke.length>500)smoke=smoke.filter((_,i)=>i%Math.ceil(smoke.length/500)===0);
+  smoke.forEach(s=>{s.sp=new THREE.Sprite(new THREE.SpriteMaterial({map:smokeTex,color:0xe2e2e2,transparent:true,depthWrite:false,opacity:0}));s.sp.visible=false;world.add(s.sp);});
+  camera.near=Math.max(.1,ext/5000);camera.updateProjectionMatrix();controls.target.copy(c);camera.position.set(c.x+ext*.9,c.y+ext*.5,c.z+ext*.9);
+// timeline event ticks
+  const tk=$('ticks'),T0=P[0].t,span=(tEnd-T0)||1;tk.innerHTML='';evT=[];
+  if(maxThr>1){let bq=0,bt;P.forEach(p=>{if(p.t<=ev.APOGEE&&p.t>T0+.5){const q=1.225*Math.exp(-p.h/8500)*p.sp*p.sp;if(q>bq){bq=q;bt=p.t;}}});if(bt!==undefined&&bt<(ev.BURNOUT??ev.APOGEE)+30)ev.MAXQ=bt;}
+  [['LIFTOFF',T0],['MAX Q',ev.MAXQ],['MECO',ev.BURNOUT],['APOGEE',ev.APOGEE],['PARACHUTE',ev.RECOVERY_DEVICE_DEPLOYMENT],['LANDING',ev.GROUND_HIT]].filter(x=>x[1]!==undefined).sort((x,y)=>x[1]-y[1]).forEach(([n,t])=>{const d=document.createElement('button');d.className='tick';d.innerHTML='<i></i><span>'+n+'</span>';d.title=n+' T+'+(t-T0).toFixed(1)+' s';d.onclick=()=>{T=t;};evT.push([n,t,d,{vis:true,up:true}]);tk.appendChild(d);});tlReset();buildTel();
+  setOrigin();let note='';if(csvLL&&!isFinite(parseFloat($('lat').value))&&Math.abs(csvLL[0]-28.61)<.01&&Math.abs(csvLL[1]+80.6)<.02)note=' CSV start is the default OpenRocket site (Cape Canaveral): enter your own coordinates and press Update map.';
+  msg(`${P.length} points, apogee ${maxAlt.toFixed(0)} m, ${(tEnd-P[0].t).toFixed(0)} s.${note}`);buildMap(note);}
+</script>
+<script>
+// load image and return null on error
+const loadImg=u=>new Promise(r=>{const i=new Image();i.crossOrigin='anonymous';i.onload=()=>r(i);i.onerror=()=>r(null);i.src=u;});
+// tile url templates
+const TILES={esri:(z,x,y)=>`https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`,
+  esrist:(z,x,y)=>`https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/${z}/${y}/${x}`,
+  esritopo:(z,x,y)=>`https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/${z}/${y}/${x}`,
+  carto:(z,x,y)=>`https://a.basemaps.cartocdn.com/dark_all/${z}/${x}/${y}.png`,osm:(z,x,y)=>`https://tile.openstreetmap.org/${z}/${x}/${y}.png`};
+// build ground map around the flight
+async function buildMap(note=''){while(mapGroup.children.length)mapGroup.remove(mapGroup.children[0]);
+  const prov=$('prov').value;if(!pts.length)return;setOrigin();
+// flight bounds in meters
+  let a=1e9,b=-1e9,c=1e9,d=-1e9;pts.forEach(p=>{a=Math.min(a,p.e);b=Math.max(b,p.e);c=Math.min(c,p.n);d=Math.max(d,p.n);});
+  const km=parseFloat($('km').value),S=km>0?km*1000:Math.min(80000,Math.max(4000,maxAlt*3,Math.max(b-a,d-c)*2.5)),cE=(a+b)/2,cN=(c+d)/2;
+  if(lat0===null||prov==='none'){mapGroup.add(new THREE.GridHelper(S,40,0x445577,0x2a3555));return msg(lat0===null&&prov!=='none'?'No launch coordinates: showing grid. Enter latitude/longitude and press Update map.':'Map disabled');}
+// map center and scale
+  const latC=lat0+cN/mlat,lonC=lon0+cE/mlon,cosL=Math.cos(latC*Math.PI/180);
+// put an image on the ground
+  const addPlane=(src,w,h,e,n,ord=0)=>{const tex=new THREE.Texture(src);tex.needsUpdate=true;tex.encoding=THREE.sRGBEncoding;tex.anisotropy=8;
+    const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:tex,depthWrite:false}));m.renderOrder=ord;m.rotation.x=-Math.PI/2;m.position.set(e,-.5,-n);mapGroup.add(m);};
+  msg('Loading map…');
+// google static map
+  if(prov==='google'){const key=$('key').value.trim();if(!key)return msg('Enter a Google Maps API key');
+    const z=Math.max(1,Math.min(21,Math.floor(Math.log2(156543.03392*cosL*640/S)))),mpp=156543.03392*cosL/2**z;
+    const img=await loadImg(`https://maps.googleapis.com/maps/api/staticmap?center=${latC},${lonC}&zoom=${z}&size=640x640&scale=2&maptype=satellite&key=${key}`);
+    if(!img)return msg('Google map failed to load: check the key, Maps Static API and billing.');addPlane(img,640*mpp,640*mpp,cE,cN);return msg('Google map loaded '+note);}
+// stitch tiles into one texture
+  const mosaic=async(S,res,ord)=>{let used=prov,ok=0,tot=0;
+  for(const pv of [prov,'esri']){used=pv;const z=Math.max(2,Math.min(pv==='osm'?19:17,Math.round(Math.log2(156543.03392*cosL*res/S)))),n=2**z;
+    const tx=lo=>(lo+180)/360*n,ty=la=>(1-Math.log(Math.tan(la*Math.PI/180)+1/Math.cos(la*Math.PI/180))/Math.PI)/2*n;
+    const lonOf=x=>x/n*360-180,latOf=y=>Math.atan(Math.sinh(Math.PI*(1-2*y/n)))*180/Math.PI,dLat=S/2/mlat,dLon=S/2/mlon;
+    const x0=Math.floor(tx(lonC-dLon)),x1=Math.floor(tx(lonC+dLon)),y0=Math.floor(ty(latC+dLat)),y1=Math.floor(ty(latC-dLat));
+    const cv=document.createElement('canvas');cv.width=(x1-x0+1)*256;cv.height=(y1-y0+1)*256;const cx=cv.getContext('2d');cx.fillStyle='#6a7a58';cx.fillRect(0,0,cv.width,cv.height);
+    const jobs=[];for(let x=x0;x<=x1;x++)for(let y=y0;y<=y1;y++)jobs.push(loadImg(TILES[pv](z,x,y)).then(im=>{if(im)cx.drawImage(im,(x-x0)*256,(y-y0)*256);return !!im;}));
+    ok=(await Promise.all(jobs)).filter(Boolean).length;tot=jobs.length;
+    if(ok){const W=lonOf(x1+1),E=lonOf(x0),N=latOf(y0),Sg=latOf(y1+1);addPlane(cv,(W-E)*mlon,(N-Sg)*mlat,((W+E)/2-lon0)*mlon,((N+Sg)/2-lat0)*mlat,ord);break;}}
+  return {used,ok,tot};};
+// several rings for far coverage
+  const RG=[[1,2048],[5,1536],[25,1024],[125,768]].filter(([f],i)=>i===0||S*f<=6e5),out=await Promise.all(RG.map(([f,r],i)=>mosaic(S*f,r,-1-i))),{used,ok,tot}=out[0];
+  msg(ok?`Map: ${ok}/${tot} tiles, area ${(S/1000).toFixed(1)} km${used!==prov?` (${prov} unavailable, showing Esri)`:''}. ${note}`:'Tiles failed to load: check your internet connection.');}
+</script>
+<script>
+// telemetry: csv channels, derived values, side stacks, data list
+let heads=[],mets=[],tlist=[],trist=[],chE=[];
+const ISA=h=>{h=Math.max(0,h);const T=h<11000?288.15-.0065*h:216.65,p=h<11000?101325*Math.pow(T/288.15,5.2559):22632*Math.exp(-(h-11000)/6341.6);return{T,p,rho:p/(287.05*T),a:Math.sqrt(401.87*T)};};
+const lerp=(x,y,k)=>x+(y-x)*k,clamp01=v=>Math.min(1,Math.max(0,v));
+// metric definitions: re = csv column, fb = computed fallback
+const MD=[
+{id:'vv',l:'Vertical speed',u:'m/s',re:/^vertical velocity/,fb:s=>s.vel.y},
+{id:'ac',l:'G-force',u:'g',re:/^total acceleration/,g:1,fb:s=>s.ac},
+{id:'mach',l:'Mach',u:'',re:/^mach/,d:2,fb:s=>s.sp/ISA(s.h).a},
+{id:'rng',l:'Downrange',u:'m',re:/^lateral distance/,km:1,fb:s=>Math.hypot(s.e,s.n)},
+{id:'pit',l:'Pitch',u:'°',fb:s=>Math.asin(Math.max(-1,Math.min(1,s.d.y)))*180/Math.PI},
+{id:'hdg',l:'Heading',u:'°',fb:s=>(Math.atan2(s.d.x,-s.d.z)*180/Math.PI+360)%360},
+{id:'q',l:'Dynamic pressure',u:'kPa',re:/^dynamic pressure/,fb:s=>.5*ISA(s.h).rho*s.sp*s.sp/1000},
+{id:'tmp',l:'Air temp',u:'°C',re:/^air temperature/,fb:s=>ISA(s.h).T-273.15},
+{id:'prs',l:'Air pressure',u:'hPa',re:/^air pressure/,fb:s=>ISA(s.h).p/100},
+{id:'rol',l:'Roll rate',u:'°/s',re:/^roll rate/,fb:s=>s.rr},
+{id:'drg',l:'Drag',u:'N',re:/^drag force/},
+{id:'mas',l:'Mass',u:'g',re:/^mass/},
+{id:'stb',l:'Stability',u:'cal',re:/^stability margin/},
+{id:'aoa',l:'Angle of attack',u:'°',re:/^angle of attack/},
+{id:'cd',l:'Drag coeff',u:'',re:/^drag coefficient/,d:2},
+{id:'wnd',l:'Wind speed',u:'m/s',re:/^wind velocity/},
+{id:'sat',l:'Satellites',u:'',re:/^(sat|number of sat)/,d:0}];
+const fm=(v,d)=>{if(v===null||!isFinite(v))return '—';const a=Math.abs(v);return d!==undefined?v.toFixed(d):a>=1e3?Math.round(v).toLocaleString('en-US'):a>=100?v.toFixed(0):a>=10?v.toFixed(1):v.toFixed(2);};
+// value of one metric between points a and b
+function mval(m,a,b,k,s){if(m.ci>=0&&a.c&&b.c){const x=a.c[m.ci],y=b.c[m.ci];if(isFinite(x)&&isFinite(y)){let v=lerp(x,y,k);if(m.g&&/m\/s/.test(m.u0))v/=9.80665;return v;}}return m.fb?m.fb(s):null;}
+const smp=(a,b,k,pos,dir)=>({h:pos.y,e:pos.x,n:-pos.z,sp:lerp(a.sp,b.sp,k),vel:{y:lerp(a.vel.y,b.vel.y,k)},ac:lerp(a.ac,b.ac,k),d:dir,rr:lerp(a.rr,b.rr,k)});
+// build side stacks and the all channels list
+function buildTel(){
+  mets=MD.map(d=>{const ci=d.re?heads.findIndex(h=>d.re.test(h)):-1,u0=ci>=0?((heads[ci].match(/\(([^)]*)\)/)||[])[1]||d.u):d.u;return Object.assign({},d,{ci,u0,un:d.g&&/m\/s/.test(u0)?'g':u0});}).filter(m=>m.ci>=0||m.fb);
+  mets.forEach(m=>{let lo=1e30,hi=-1e30;pts.forEach(p=>{const v=mval(m,p,p,0,{h:p.h,e:p.e,n:p.n,sp:p.sp,vel:p.vel,ac:p.ac,d:p.d,rr:p.rr});if(v!==null&&isFinite(v)){lo=Math.min(lo,v);hi=Math.max(hi,v);}});m.lo=lo;m.hi=hi;});
+  mets=mets.filter(m=>m.hi>=m.lo);
+  const LI=['vv','ac','mach','rng','pit','hdg'];tlist=mets.filter(m=>LI.includes(m.id));
+  trist=mets.filter(m=>!LI.includes(m.id)).sort((a,b)=>(b.ci>=0)-(a.ci>=0)).slice(0,6);
+  const row=(m,box)=>{const d=document.createElement('div');d.className='m';d.innerHTML='<small></small><b>0</b><u></u><i><em></em></i>';d.children[0].textContent=m.l;m.b=d.children[1];m.ue=d.children[2];m.em=d.children[3].firstChild;box.appendChild(d);};
+  $('tl').innerHTML='';$('tr').innerHTML='';tlist.forEach(m=>row(m,$('tl')));trist.forEach(m=>row(m,$('tr')));
+  const ch=$('ch');ch.innerHTML='';chE=heads.map(h=>{const d=document.createElement('div'),n=document.createElement('span'),v=document.createElement('b');n.textContent=h;d.append(n,v);ch.appendChild(d);return v;});
+  if(!heads.length)ch.innerHTML='<div><span>No CSV channels</span></div>';}
+// update values every frame
+function updTel(a,b,k,pos,dir){const s=smp(a,b,k,pos,dir),o=m=>{const v=mval(m,a,b,k,s),ok=v!==null&&isFinite(v),fr=ok?clamp01((v-m.lo)/((m.hi-m.lo)||1)):0;let un=m.un,t='—';
+    if(ok){if(m.km&&Math.abs(v)>=1e4){t=(v/1e3).toFixed(1);un='km';}else t=fm(v,m.d);}
+    m.b.textContent=t;m.ue.textContent=un;m.em.style.width=100*fr+'%';return[m.l,t,un,fr];};
+  const r={L:tlist.map(o),R:trist.map(o)};
+  if(chE.length&&$('ch').classList.contains('on')&&a.c&&b.c)chE.forEach((e,i)=>{const x=a.c[i],y=b.c[i];e.textContent=isFinite(x)&&isFinite(y)?fm(lerp(x,y,k)):'—';});
+  return r;}
+</script>
+<script>
+// zoomable timeline: wheel / buttons zoom, drag to seek, labels never overlap
+let w0=0,w1=1,g0=0,g1=1,seeking=false;
+const tlX=t=>(t-w0)/((w1-w0)||1);
+function tlReset(){w0=g0=pts[0].t;w1=g1=tEnd;}
+function tlZoom(f,tc){const a=pts[0].t,full=tEnd-a;if(tc===undefined)tc=T;const sp=Math.min(full,Math.max(Math.min(2,full),(g1-g0)*f)),fr=(tc-g0)/((g1-g0)||1);let n=tc-fr*sp;n=Math.min(tEnd-sp,Math.max(a,n));g0=n;g1=n+sp;}
+function tlStep(){const a=pts[0].t,full=(tEnd-a)||1,sp=g1-g0;
+  if(sp<full*.995&&playing&&!seeking){const x=(T-g0)/sp;if(x>.8||x<.08){let n=T-.4*sp;n=Math.min(tEnd-sp,Math.max(a,n));g0=n;g1=n+sp;}}
+  const k=.25;w0+=(g0-w0)*k;w1+=(g1-w1)*k;if(Math.abs(g0-w0)+Math.abs(g1-w1)<1e-4*full){w0=g0;w1=g1;}
+  const W=$('track').clientWidth||1;let lu=-1e9,ld=-1e9;
+  evT.forEach(([n,t,d,L])=>{const x=tlX(t),px=x*W;d.style.display=x<-.03||x>1.03?'none':'';d.style.left=100*x+'%';
+    const fu=px-lu>=92,fd=px-ld>=92;let up;if(fu&&fd)up=lu<=ld;else if(fu)up=true;else if(fd)up=false;else up=null;
+    L.vis=up!==null;if(up!==null){L.up=up;if(up)lu=px;else ld=px;}d.classList.toggle('up',L.up);d.classList.toggle('nol',!L.vis);});
+  const c=v=>Math.min(100,Math.max(0,100*v));$('fill').style.width=c(tlX(T))+'%';$('head').style.left=c(tlX(T))+'%';
+  const z=full/((w1-w0)||1);$('zv').textContent=z>1.05?'×'+z.toFixed(1):'';}
+const tAt=x=>{const r=$('track').getBoundingClientRect();return w0+(w1-w0)*Math.min(1,Math.max(0,(x-r.left)/r.width));};
+const trk=$('track');
+trk.addEventListener('pointerdown',e=>{if(!pts.length||e.target.closest('.tick'))return;seeking=true;trk.setPointerCapture(e.pointerId);T=tAt(e.clientX);});
+trk.addEventListener('pointermove',e=>{if(seeking)T=tAt(e.clientX);});
+['pointerup','pointercancel'].forEach(n=>trk.addEventListener(n,()=>{seeking=false;}));
+trk.addEventListener('wheel',e=>{if(!pts.length)return;e.preventDefault();tlZoom(e.deltaY<0?.75:1.33,tAt(e.clientX));},{passive:false});
+trk.addEventListener('dblclick',()=>{if(pts.length)tlReset();});
+$('zi').onclick=()=>pts.length&&tlZoom(.5);$('zo').onclick=()=>pts.length&&tlZoom(2);$('zr').onclick=()=>pts.length&&tlReset();
+</script>
+<script>
+// flight phase name
+const phase=()=>{if(!playing&&T<=pts[0].t+.001)return 'STANDBY';const dep=ev.RECOVERY_DEVICE_DEPLOYMENT;if(T>=ev.GROUND_HIT-.01)return 'LANDING';if(dep!==undefined&&T>=dep)return 'PARACHUTE DESCENT';
+  if(T>=ev.APOGEE)return 'DESCENT';if(ev.BURNOUT!==undefined&&T>=ev.BURNOUT)return 'COASTING';return maxThr>1?'ENGINE BURN':'ASCENT';};
+// update scene for current time
+function update(){let i=0;while(i<pts.length-2&&pts[i+1].t<=T)i++;
+  const a=pts[i],b=pts[Math.min(i+1,pts.length-1)],k=b.t>a.t?Math.min(1,Math.max(0,(T-a.t)/(b.t-a.t))):0,sc=+$('sc').value||1;
+  const pos=a.v.clone().lerp(b.v,k),dir=a.d.clone().lerp(b.d,k).normalize(),roll=a.roll+(b.roll-a.roll)*k,th=a.th+(b.th-a.th)*k,dep=ev.RECOVERY_DEVICE_DEPLOYMENT;
+// tilt down after parachute
+  if(dep!==undefined&&T>dep){dir.lerp(DOWN,Math.min(1,(T-dep)/1.5)).normalize();}
+  rocket.position.copy(pos);rocket.quaternion.setFromUnitVectors(UP,dir).multiply(new THREE.Quaternion().setFromAxisAngle(UP,roll));rocket.scale.setScalar(sc);
+// flame size
+  const fl=maxThr>0?th/maxThr:0;flame.visible=th>1;if(flame.visible){const h=modelLen*1.3*fl*(.85+.3*Math.random());
+    fOut.scale.set(bodyR*.95,h,bodyR*.95);fIn.scale.set(bodyR*.5,h*.6,bodyR*.5);}
+// smoke sprites
+  const sm=Math.max(modelLen*sc*.35,2);smoke.forEach(s=>{const age=T-s.t,vis=age>=0&&age<14;s.sp.visible=vis;if(vis){s.sp.position.copy(s.v);const z=sm*s.big*(1+age*.7);s.sp.scale.set(z,z,1);s.sp.material.opacity=.5*(1-age/14)*(s.big===2.5?1.2:1);}});
+// parachute
+  chute.visible=dep!==undefined&&T>=dep;if(chute.visible){chute.position.copy(pos);chute.scale.setScalar(modelLen*sc);}
+// trail and ground line
+  world.children[1].geometry.setDrawRange(0,i+2);
+  const dp=drop.geometry.attributes.position;dp.setXYZ(0,pos.x,pos.y,pos.z);dp.setXYZ(1,pos.x,0,pos.z);dp.needsUpdate=true;
+// follow camera
+  if($('cam').value==='follow'){const dl=pos.clone().sub(controls.target);controls.target.add(dl);camera.position.add(dl);}
+// onboard camera pose
+  const mode=$('cview').value,L=modelLen,ref=Math.abs(dir.y)>.99?new THREE.Vector3(0,0,1):UP.clone(),r0=new THREE.Vector3().crossVectors(dir,ref).normalize(),u0=new THREE.Vector3().crossVectors(r0,dir).normalize(),rr=$('stab').checked?0:roll,right=r0.clone().applyAxisAngle(dir,rr),upv=u0.clone().applyAxisAngle(dir,rr);
+  let at,look,up;if(mode==='fwd'||mode==='back'){at=pos.clone().addScaledVector(right,bodyR*1.7).addScaledVector(dir,L*.3);look=mode==='fwd'?dir.clone():dir.clone().negate();up=upv;}
+  else if(mode==='side'){at=pos.clone().addScaledVector(right,bodyR+.01).addScaledVector(dir,L*.2);look=right.clone();up=dir.clone();}
+  else{at=pos.clone();look=DOWN.clone();const h=dir.clone().setY(0);up=h.length()>.1?h.normalize():upv.clone().setY(0).normalize();if(up.lengthSq()<.5)up.set(0,0,-1);}
+  camB.position.copy(at);camB.up.copy(up);camB.lookAt(at.clone().add(look));camB.rotateX((+$('ctilt').value||0)*Math.PI/180);
+// telemetry text
+  const ph=phase(),idle=!playing&&T<=pts[0].t+.001;$('hP').textContent=!playing&&!idle&&T<tEnd?ph+' · PAUSED':ph;const s=Math.max(0,T-pts[0].t)|0,p2=n=>String(n).padStart(2,'0'),pr=(T-pts[0].t)/((tEnd-pts[0].t)||1),nf=x=>Math.round(x).toLocaleString('en-US');
+  const ts='T+ '+p2(s/3600|0)+':'+p2(s/60%60|0)+':'+p2(s%60);$('hT').textContent=idle?'Launch':ts;$('hT').classList.toggle('go',idle);const au=x=>x>=1e4?[(x/1e3).toFixed(1),'km']:[nf(x),'m'],A=au(pos.y),AM=au(maxAlt);$('hA').textContent=A[0];$('uA').textContent=A[1];evT.forEach(([n,t,d])=>d.classList.toggle('done',T>=t));$('hV').textContent=nf((a.sp+(b.sp-a.sp)*k)*3.6);$('hF').textContent=nf(th);$('hM').textContent=AM[0];$('uM').textContent=AM[1];
+  tlStep();const tt=updTel(a,b,k,pos,dir);tel={L:tt.L,R:tt.R,w0,w1,ph,T:ts,v:$('hV').textContent,a:A[0],au:A[1],f:$('hF').textContent,m:AM[0],mu:AM[1],tt:T,name:$('bn').textContent,pr,t0:pts[0].t,span:(tEnd-pts[0].t)||1}}
+// render main view and onboard view
+function renderAll(){const m=$('bmode').value,full=m==='full'&&pts.length,pip=m==='pip'&&pts.length,W=innerWidth,H=innerHeight,pe=$('pip');
+  renderer.setScissorTest(false);renderer.setViewport(0,0,W,H);
+  if(!full){sky.position.copy(camera.position);renderer.render(scene,camera);}
+  if(full||pip){const w=full?W:Math.min(W*(+$('psz').value||34)/100,900),h=full?H:w*9/16,x=full?0:W-w-10,y=full?0:H-h-64;
+    camB.aspect=w/h;camB.fov=+$('cfov').value||75;camB.updateProjectionMatrix();renderer.setScissorTest(true);renderer.setViewport(x,y,w,h);renderer.setScissor(x,y,w,h);
+    const mode=$('cview').value,chv=chute.visible,sc=+$('sc').value||1;pe.firstElementChild.textContent='Onboard cam - '+$('cview').selectedOptions[0].text;rocket.scale.setScalar(1);rocket.visible=mode!=='down';chute.visible=false;sky.position.copy(camB.position);
+    renderer.render(scene,camB);rocket.visible=true;rocket.scale.setScalar(sc);chute.visible=chv;renderer.setScissorTest(false);
+    Object.assign(pe.style,{display:'block',left:x+'px',top:(H-y-h)+'px',width:w+'px',height:h+'px'});pipR={x,y:H-y-h,w,h,t:pe.firstElementChild.textContent};}
+  else{pe.style.display='none';pipR=null;}
+  $('tr').style.right=(m==='pip'&&pipR?pipR.w+38:28)+'px';}
+// main loop
+let last=performance.now();
+function frame(now){const dt=Math.min(.1,(now-last)/1000);last=now;
+  if(pts.length){if(playing){T+=dt*(+$('spd').value);if(T>=tEnd){T=tEnd;playing=false;}}update();}
+  controls.update();renderAll();if(rec&&tel)compose();if(rec&&T>=tEnd&&!rec.end)rec.end=now+1500;if(rec&&rec.end&&now>rec.end)stopRec();requestAnimationFrame(frame);}
+// resize
+function resize(){renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();}
+addEventListener('resize',resize);
+</script>
+<script>
+// draw frame with telemetry overlay
+function compose(){const c=renderer.domElement,w=rec.cv.width,h=rec.cv.height,x=rec.cx,u=h/900,s=w/innerWidth,mw=Math.min(w*.42,900*u),x0=(w-mw)/2,yT=h-40*u,W='#fff',M='rgba(255,255,255,.62)';
+  x.drawImage(c,0,0,w,h);
+  let g=x.createLinearGradient(0,h-260*u,0,h);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(0,0,0,.88)');x.fillStyle=g;x.fillRect(0,h-260*u,w,260*u);
+  g=x.createLinearGradient(0,0,0,110*u);g.addColorStop(0,'rgba(0,0,0,.7)');g.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=g;x.fillRect(0,0,w,110*u);
+  const tx=(t,px,py,sz,wt,col,al,ls)=>{x.font=`${wt} ${sz*u}px Barlow,"DIN Alternate",Arial,sans-serif`;x.fillStyle=col;x.textAlign=al;if('letterSpacing' in x)x.letterSpacing=ls*u+'px';x.fillText(t,px,py);};
+  if(pipR){x.strokeStyle='rgba(255,255,255,.3)';x.lineWidth=1;x.strokeRect(pipR.x*s,pipR.y*s,pipR.w*s,pipR.h*s);const cx=(pipR.x+pipR.w/2)*s,ty=pipR.y*s+19*u,lb=pipR.t.toUpperCase();
+    tx(lb,cx,ty,11,600,W,'center',2.4);const hw=x.measureText(lb).width/2;x.fillStyle='#f33';x.beginPath();x.arc(cx-hw-12*u,ty-4*u,3.5*u,0,7);x.fill();}
+  tx((tel.name||'Rocket Flight 3D').toUpperCase(),28*u,40*u,15,600,W,'left',5.5);
+  tx('SPEED',28*u,h-118*u,11,500,M,'left',2);tx(tel.v,28*u,h-70*u,46,600,W,'left',1);const vw=x.measureText(tel.v).width;tx('KM/H',28*u+vw+10*u,h-70*u,14,500,M,'left',2);tx('THRUST '+tel.f+' N',28*u,h-42*u,11,500,M,'left',2);
+  tx('ALTITUDE',w-28*u,h-118*u,11,500,M,'right',2);tx(tel.au.toUpperCase(),w-28*u,h-70*u,14,500,M,'right',2);const uw=x.measureText(tel.au.toUpperCase()).width+10*u;tx(tel.a,w-28*u-uw,h-70*u,46,600,W,'right',1);tx('APOGEE '+tel.m+' '+tel.mu.toUpperCase(),w-28*u,h-42*u,11,500,M,'right',2);
+  tx(tel.ph.toUpperCase(),w/2,h-128*u,12,500,M,'center',3.5);tx(tel.T,w/2,h-86*u,40,600,W,'center',3);
+  if($('tm').checked){const st=(a,xx,al)=>a.forEach(([l,v,un,fr],i)=>{const y=112*u+i*56*u,bx=al==='left'?xx:xx-80*u;tx(l.toUpperCase(),xx,y,10,500,M,al,2);
+      if(al==='left'){tx(v,xx,y+24*u,22,600,W,al,.5);const vw=x.measureText(v).width;tx(un.toUpperCase(),xx+vw+7*u,y+24*u,11,500,M,al,1.5);}
+      else{tx(un.toUpperCase(),xx,y+24*u,11,500,M,al,1.5);const uw=x.measureText(un.toUpperCase()).width+7*u;tx(v,xx-uw,y+24*u,22,600,W,al,.5);}
+      x.fillStyle='rgba(255,255,255,.2)';x.fillRect(bx,y+32*u,80*u,2*u);x.fillStyle=W;x.fillRect(bx,y+32*u,80*u*fr,2*u);});st(tel.L,28*u,'left');st(tel.R,pipR&&$('bmode').value==='pip'?pipR.x*s-18*u:w-28*u,'right');}
+  const X=t=>(t-tel.w0)/((tel.w1-tel.w0)||1),cl=v=>Math.min(1,Math.max(0,v)),hx=x0+mw*cl(X(tel.tt));
+  x.fillStyle='rgba(255,255,255,.3)';x.fillRect(x0,yT-u,mw,2*u);x.fillStyle=W;x.fillRect(x0,yT-u,hx-x0,2*u);x.fillRect(hx-1.5*u,yT-8*u,3*u,16*u);
+  evT.forEach(([n,t,d,L])=>{const q=X(t);if(q<-.02||q>1.02)return;const px=x0+mw*q;x.save();x.translate(px,yT);x.rotate(Math.PI/4);x.fillStyle=tel.tt>=t?W:'#000';x.strokeStyle=W;x.lineWidth=u;x.fillRect(-4*u,-4*u,8*u,8*u);x.strokeRect(-4*u,-4*u,8*u,8*u);x.restore();if(L.vis)tx(n,px,L.up?yT-14*u:yT+24*u,10,500,M,'center',1.4);});}
+// stop recording
+function stopRec(){if(rec&&rec.mr.state!=='inactive')rec.mr.stop();}
+// start recording
+function startRec(){if(rec)return stopRec();if(!pts.length)return msg('Load a flight first');
+  const c=renderer.domElement,cw=Math.min(c.width,1920)&~1,chh=Math.round(cw*c.height/c.width)&~1,cv=document.createElement('canvas');cv.width=cw;cv.height=chh;
+  const mt=['video/mp4;codecs=avc1','video/webm;codecs=vp9','video/webm'].find(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported(t));
+  if(!mt)return msg('Video recording is not supported in this browser: use Chrome or Edge');
+  const parts=[],mr=new MediaRecorder(cv.captureStream(30),{mimeType:mt,videoBitsPerSecond:12e6});
+  mr.ondataavailable=e=>{if(e.data.size)parts.push(e.data);};
+  mr.onstop=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(parts,{type:mt}));a.download='rocket-flight.'+(mt.includes('mp4')?'mp4':'webm');a.click();setTimeout(()=>URL.revokeObjectURL(a.href),6e4);rec=null;$('exp').textContent='Export video';msg('Video saved to your downloads');};
+  rec={cv,cx:cv.getContext('2d'),mr};T=pts[0].t;playing=true;mr.start(250);$('panel').classList.add('min');$('exp').textContent='Stop recording';msg('Recording in real time at the selected speed. It stops after landing.');}
+$('exp').onclick=startRec;
+</script>
+<script>
+// world map picker with leaflet
+let lm=null,lmk=null,lsel=null,lbase=null,lstreet=false;const wrapLng=x=>((x+540)%360+360)%360-180;
+const baseL=st=>window.L.tileLayer(st?'https://tile.openstreetmap.org/{z}/{x}/{y}.png':'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:20,maxNativeZoom:st?19:17,attribution:st?'OpenStreetMap':'Esri'});
+// place or move the red marker
+function setSel(ll){lsel=ll;$('lat').value=ll.lat.toFixed(6);$('lon').value=wrapLng(ll.lng).toFixed(6);if(lmk)lmk.setLatLng(ll);else lmk=window.L.circleMarker(ll,{radius:7,color:'#fff',weight:2,fillColor:'#f33',fillOpacity:1}).addTo(lm);$('mi').textContent='Launch site: '+ll.lat.toFixed(6)+', '+wrapLng(ll.lng).toFixed(6);}
+// status line under the pick button
+function updSite(){const a=parseFloat($('lat').value),b=parseFloat($('lon').value);$('stL').textContent=isFinite(a)&&isFinite(b)?a.toFixed(5)+', '+b.toFixed(5):'No launch site';}
+// move marker to typed coordinates
+function syncSel(){if(!lm)return;const a=parseFloat($('lat').value),b=parseFloat($('lon').value);if(isFinite(a)&&isFinite(b)){setSel(window.L.latLng(a,b));lm.setView([a,b],Math.max(lm.getZoom(),10));}}
+// open the picker
+$('pick').onclick=()=>{if(!window.L)return msg('The map picker needs an internet connection (Leaflet did not load)');$('mm').classList.add('on');if(csvLL&&!$('lat').value&&!$('lon').value){$('lat').value=csvLL[0];$('lon').value=csvLL[1];}
+  if(!lm){lm=window.L.map('mmap',{worldCopyJump:true,minZoom:2}).setView([20,0],2);lbase=baseL(false).addTo(lm);lm.on('click',e=>setSel(e.latlng));}
+  setTimeout(()=>{lm.invalidateSize();const a=parseFloat($('lat').value),b=parseFloat($('lon').value);if(isFinite(a)&&isFinite(b)){setSel(window.L.latLng(a,b));lm.setView([a,b],10);}},60);};
+// switch satellite and streets
+$('mu').onclick=()=>{if(!lm)return;lstreet=!lstreet;lm.removeLayer(lbase);lbase=baseL(lstreet).addTo(lm);};
+// close without saving
+$('mc').onclick=()=>$('mm').classList.remove('on');
+// apply chosen location
+$('mok').onclick=()=>{const a=parseFloat($('lat').value),b=parseFloat($('lon').value);if(!isFinite(a)||!isFinite(b)){if($('prov').value==='none'){$('mm').classList.remove('on');return buildMap();}return $('mi').textContent='Click the map or type coordinates first';}$('mm').classList.remove('on');updSite();buildMap();msg('Launch site set');};
+// search by place name or coordinates
+$('mg').onclick=async()=>{const q=$('mq').value.trim();if(!q||!lm)return;const m=q.match(/^(-?\d+(?:\.\d+)?)\s*[,;\s]\s*(-?\d+(?:\.\d+)?)$/);let a,b;
+  if(m){a=+m[1];b=+m[2];}else{try{const r=await(await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q='+encodeURIComponent(q))).json();if(!r[0])return $('mi').textContent='Nothing found';a=+r[0].lat;b=+r[0].lon;}catch(e){return $('mi').textContent='Search failed: check your internet connection';}}
+  setSel(window.L.latLng(a,b));lm.setView([a,b],12);};
+$('mq').onkeydown=e=>{if(e.key==='Enter')$('mg').click();};
+</script>
+<script>
+// play and pause
+function togglePlay(){if(!pts.length)return;if(T>=tEnd)T=pts[0].t;playing=!playing;}
+// keyboard shortcuts
+addEventListener('keydown',e=>{if(/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)&&e.target.type!=='range')return;
+  if(e.code==='Space'){e.preventDefault();togglePlay();}
+  else if(e.code==='KeyC')toggleCam();
+  else if(e.code==='KeyT')$('tm').click();else if(e.code==='KeyD')$('dBtn').click();else if(e.code==='KeyM')$('gear').click();
+  else if(e.code==='KeyF'){document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen();}
+  else if(pts.length&&(e.code==='ArrowLeft'||e.code==='ArrowRight')){e.preventDefault();T=Math.min(tEnd,Math.max(pts[0].t,T+(e.code==='ArrowLeft'?-5:5)));}});
+// hide buttons when idle
+let idleT=0;const wake=()=>{document.body.classList.remove('idle');clearTimeout(idleT);idleT=setTimeout(()=>{if(playing&&$('autohide').checked&&$('panel').classList.contains('min'))document.body.classList.add('idle');},3000);};
+['mousemove','mousedown','touchstart','keydown'].forEach(n=>addEventListener(n,wake,{passive:true}));wake();
+// mission name
+$('mname').oninput=()=>{$('bn').textContent=$('mname').value.trim()||'Rocket Flight 3D';};
+$('hT').onclick=togglePlay;
+$('tm').onchange=()=>document.body.classList.toggle('notm',!$('tm').checked);$('tm').onchange();
+$('dBtn').onclick=()=>$('ch').classList.toggle('on');
+// menu toggle
+$('min').onclick=$('gear').onclick=()=>$('panel').classList.toggle('min');
+// load csv file
+const loadFlight=async f=>{const t=await f.text(),b=pts;loadCSV(t);applyObj();if(pts!==b)keepCSV(f.name,t);};
+$('fcsv').onchange=async e=>{const f=e.target.files[0];if(f)await loadFlight(f);e.target.value='';};
+$('fobj').onchange=e=>loadModelFiles(e.target.files);
+// model option changes
+$('axis').onchange=$('len').onchange=$('inside').onchange=$('exact').onchange=applyObj;
+// map option changes
+$('prov').onchange=()=>{$('keyw').style.display=$('prov').value==='google'?'block':'none';};
+// drag and drop files
+addEventListener('dragover',e=>e.preventDefault());
+addEventListener('drop',async e=>{e.preventDefault();const fl=[...e.dataTransfer.files],isM=f=>/\.(obj|mtl)$/i.test(f.name),md=fl.filter(isM);if(md.length)await loadModelFiles(md);for(const f of fl)if(!isM(f))await loadFlight(f);});
+// demo flight kept for old saved sessions
+function runDemo(){const P=[];let t=0,h=0,v=0,e=0,n=0,ap=false;csvLL=null;
+  for(;t<150;t=Math.round((t+.1)*10)/10){P.push({t,e,n,h,zen:null,az:null,th:t<3?300:0,rr:120,spd:null});
+    if(t<3)v+=5.5;else if(v>0&&!ap)v-=(9.81+4e-4*v*v)*.1;else{ap=true;v=-6;}
+    h+=v*.1;e+=(ap?4:.8*Math.max(v,0)/100)*.1;n+=.03;if(h<0&&t>1){P.push({t:t+.1,e,n,h:0,zen:null,az:null,th:0,rr:0,spd:null});break;}}
+  const apT=P.reduce((m,p)=>p.h>m.h?p:m).t;setPoints(P,{RECOVERY_DEVICE_DEPLOYMENT:apT+.5});keepDemo();}
+
+// markers toggle
+$('mk').onchange=()=>world.children.forEach(o=>{if(o.userData.mk)o.visible=$('mk').checked;});
+// coordinate input
+$('lat').onchange=$('lon').onchange=e=>{const m=e.target.value.match(/(-?\d+(?:\.\d+)?)\s*[,;\s]\s*(-?\d+(?:\.\d+)?)/);if(m&&e.target.id==='lat'){$('lat').value=m[1];$('lon').value=m[2];}syncSel();};
+// camera toggle button
+const camSync=()=>{$('camL').textContent=$('cam').value==='follow'?'Follow':'Free';};
+function toggleCam(){$('cam').value=$('cam').value==='follow'?'free':'follow';camSync();}
+$('camBtn').onclick=toggleCam;$('cam').onchange=camSync;
+
+// start render loop after all modules load
+resize();requestAnimationFrame(frame);
+</script>
+<script>
+// saved setting ids
+const LSK='rf3d.v1',IDS=['axis','len','exact','inside','mk','lat','lon','prov','key','km','sc','bmode','cview','stab','cfov','ctilt','psz','spd','cam','mname','autohide','tm'];
+let ready=false;
+// indexeddb for big files
+const idb=new Promise(r=>{try{const q=indexedDB.open('rf3d',1);q.onupgradeneeded=()=>q.result.createObjectStore('kv');q.onsuccess=()=>r(q.result);q.onerror=()=>r(null);}catch(e){r(null);}});
+// tiny key value helper
+const kv=async(m,k,v)=>{const d=await idb;if(!d)return;return new Promise(r=>{try{const s=d.transaction('kv',m==='get'?'readonly':'readwrite').objectStore('kv'),q=m==='get'?s.get(k):m==='put'?s.put(v,k):s.delete(k);q.onsuccess=()=>r(q.result);q.onerror=()=>r();}catch(e){r();}});};
+// status line helpers
+const setSt=(id,t)=>{$(id).textContent=t;};
+const keepCSV=(name,text)=>{kv('put','csv',{name,text});kv('del','demo');setSt('stF',name);};
+const keepDemo=()=>{kv('put','demo',1);kv('del','csv');setSt('stF','Demo flight');};
+const keepModel=(k,name,text)=>{kv('put',k,{name,text});setSt('stM',name);};
+const dropModel=k=>kv('del',k);
+// save settings
+const val=e=>e.type==='checkbox'?e.checked:e.value;
+function save(){if(!ready)return;try{const o={};IDS.forEach(i=>o[i]=val($(i)));o.det={};document.querySelectorAll('#panel details').forEach(d=>o.det[d.id]=d.open);
+  o.menu=!$('panel').classList.contains('min');o.T=pts.length?T:null;o.cam=[camera.position.toArray(),controls.target.toArray()];localStorage.setItem(LSK,JSON.stringify(o));}catch(e){}}
+// autosave
+setInterval(save,1500);['input','change','toggle'].forEach(n=>addEventListener(n,save,true));addEventListener('pagehide',save);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)save();});
+// reset everything
+$('wipe').onclick=async()=>{if(!confirm('Delete all saved settings and files from this browser?'))return;ready=false;localStorage.removeItem(LSK);for(const k of ['csv','demo','obj','mtl'])await kv('del',k);location.reload();};
+// restore on start
+(async()=>{let s=null;try{s=JSON.parse(localStorage.getItem(LSK));}catch(e){}
+  try{if(s){IDS.forEach(i=>{if(s[i]!=null){const e=$(i);if(e.type==='checkbox')e.checked=!!s[i];else e.value=s[i];}});
+      $('keyw').style.display=$('prov').value==='google'?'block':'none';$('panel').classList.toggle('min',!s.menu);
+      Object.entries(s.det||{}).forEach(([k,v])=>{const d=$(k);if(d)d.open=v;});keepSc=true;$('tm').onchange();$('mname').oninput();camSync();updSite();}
+    const [csv,demo,obj,mtl]=await Promise.all(['csv','demo','obj','mtl'].map(k=>kv('get',k)));
+    if(mtl){mtlInfo=parseMTL(mtl.text);setSt('stM',mtl.name);}
+    if(obj){loadOBJ(obj.text);setSt('stM',obj.name+(mtl?' + '+mtl.name:''));}
+    if(csv){loadCSV(csv.text);setSt('stF',csv.name);if(objInfo)applyObj();}else if(demo){runDemo();setSt('stF','Demo flight');}
+    if(s&&pts.length){if(isFinite(s.T))T=Math.min(tEnd,Math.max(pts[0].t,s.T));if(s.cam){camera.position.fromArray(s.cam[0]);controls.target.fromArray(s.cam[1]);}}
+  }catch(e){console.error(e);}
+  keepSc=false;ready=true;})();
+</script>
+</body></html>
