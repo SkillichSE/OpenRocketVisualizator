@@ -37,8 +37,8 @@ function parseOBJ(t){const v=[],vn=[],G={};let cur='default',mat='';const ix=(s,
 function parseMTL(t){const M={};let c=null;for(const l of t.split(/\r?\n/)){const p=l.trim().split(/\s+/),k=p[0];
   if(k==='newmtl')c=M[l.trim().slice(7).trim()]={};else if(c){if(k==='Kd')c.kd=[+p[1],+p[2],+p[3]];else if(k==='d')c.d=+p[1];else if(k==='Tr')c.d=1-p[1];}}return M;}
 async function loadModelFiles(fl){const isM=f=>/\.mtl$/i.test(f.name);fl=[...fl].sort((a,b)=>isM(b)-isM(a));
-  if(!fl.some(isM)&&fl.length)mtlInfo=null;
-  for(const f of fl){const t=await f.text();if(isM(f)){mtlInfo=parseMTL(t);if(objInfo)applyObj();}else loadOBJ(t);}}
+  if(!fl.some(isM)&&fl.length){mtlInfo=null;dropModel('mtl');}
+  for(const f of fl){const t=await f.text();keepModel(isM(f)?'mtl':'obj',f.name,t);if(isM(f)){mtlInfo=parseMTL(t);if(objInfo)applyObj();}else loadOBJ(t);}}
 function loadOBJ(t){const G=parseOBJ(t),mn=[1e9,1e9,1e9],mx=[-1e9,-1e9,-1e9];let n=0;
   for(const a of Object.values(G))for(let i=0;i<a.length;i+=3){n++;for(let k=0;k<3;k++){mn[k]=Math.min(mn[k],a[i+k]);mx[k]=Math.max(mx[k],a[i+k]);}}
   if(!n)return msg('OBJ file is empty or has no faces');objInfo={G,mn,mx,cen:mn.map((m,k)=>(m+mx[k])/2)};applyObj();}
@@ -62,4 +62,4 @@ function applyObj(){if(!objInfo)return;clearHolder();const {G,mn,mx,cen}=objInfo
     holder.add(new THREE.Mesh(g,new THREE.MeshStandardMaterial({color:col,roughness:.5,metalness:.1,side:THREE.DoubleSide,transparent:(ins&&!inn)||(md&&md.d<1),opacity:md&&md.d<1?md.d:ins&&!inn?.28:1,depthWrite:!((ins&&!inn)||(md&&md.d<1))})));}
   holder.scale.setScalar(f);modelLen=dimAx*f;bodyR=rawR>0?rawR*f:modelLen*.026;setFlame();autoScale();
   msg(`Model: length ${(modelLen*100).toFixed(0)} cm (${how}), nose ${sg>0?'+':'-'}${'XYZ'[ax]}${mtlInfo?', MTL colors':'. Tip: load the .mtl together with the .obj for exact colors'}`);}
-function autoScale(){$('sc').value=Math.round(Math.min(500,Math.max(1,ext*.03/modelLen)));}
+function autoScale(){if(keepSc)return;$('sc').value=Math.round(Math.min(500,Math.max(1,ext*.03/modelLen)));}

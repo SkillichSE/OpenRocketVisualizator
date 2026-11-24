@@ -1,21 +1,29 @@
 /* ui.js: UI event handlers, demo flight, boot */
 function togglePlay(){if(!pts.length)return;if(T>=tEnd)T=pts[0].t;playing=!playing;$('play').textContent=playing?'Pause':'Play';}
 $('play').onclick=togglePlay;
-addEventListener('keydown',e=>{if(e.code==='Space'&&!/INPUT|SELECT/.test(e.target.tagName)){e.preventDefault();togglePlay();}});
+addEventListener('keydown',e=>{if(/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)&&e.target.type!=='range')return;
+  if(e.code==='Space'){e.preventDefault();togglePlay();}
+  else if(e.code==='KeyM')$('gear').click();
+  else if(e.code==='KeyF'){document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen();}
+  else if(pts.length&&(e.code==='ArrowLeft'||e.code==='ArrowRight')){e.preventDefault();T=Math.min(tEnd,Math.max(pts[0].t,T+(e.code==='ArrowLeft'?-5:5)));}});
+let idleT=0;const wake=()=>{document.body.classList.remove('idle');clearTimeout(idleT);idleT=setTimeout(()=>{if(playing&&$('autohide').checked&&$('panel').classList.contains('min'))document.body.classList.add('idle');},3000);};
+['mousemove','mousedown','touchstart','keydown'].forEach(n=>addEventListener(n,wake,{passive:true}));wake();
+$('mname').oninput=()=>{$('bn').textContent=$('mname').value.trim()||'Rocket Flight 3D';};
 $('seek').oninput=e=>{if(pts.length)T=pts[0].t+(tEnd-pts[0].t)*e.target.value/1000;};
 $('min').onclick=$('gear').onclick=()=>$('panel').classList.toggle('min');
-$('fcsv').onchange=async e=>{const f=e.target.files[0];if(f){loadCSV(await f.text());applyObj();}};
+const loadFlight=async f=>{const t=await f.text(),b=pts;loadCSV(t);applyObj();if(pts!==b)keepCSV(f.name,t);};
+$('fcsv').onchange=async e=>{const f=e.target.files[0];if(f)await loadFlight(f);e.target.value='';};
 $('fobj').onchange=e=>loadModelFiles(e.target.files);
 $('axis').onchange=$('len').onchange=$('inside').onchange=$('exact').onchange=applyObj;
 $('prov').onchange=()=>{$('key').style.display=$('prov').value==='google'?'block':'none';buildMap();};
 $('map').onclick=()=>buildMap();$('km').onchange=()=>buildMap();
 addEventListener('dragover',e=>e.preventDefault());
-addEventListener('drop',async e=>{e.preventDefault();const fl=[...e.dataTransfer.files],isM=f=>/\.(obj|mtl)$/i.test(f.name),md=fl.filter(isM);if(md.length)await loadModelFiles(md);for(const f of fl)if(!isM(f)){loadCSV(await f.text());applyObj();}});
+addEventListener('drop',async e=>{e.preventDefault();const fl=[...e.dataTransfer.files],isM=f=>/\.(obj|mtl)$/i.test(f.name),md=fl.filter(isM);if(md.length)await loadModelFiles(md);for(const f of fl)if(!isM(f))await loadFlight(f);});
 $('demo').onclick=()=>{const P=[];let t=0,h=0,v=0,e=0,n=0,ap=false;csvLL=null;
   for(;t<150;t=Math.round((t+.1)*10)/10){P.push({t,e,n,h,zen:null,az:null,th:t<3?300:0,rr:120,spd:null});
     if(t<3)v+=5.5;else if(v>0&&!ap)v-=(9.81+4e-4*v*v)*.1;else{ap=true;v=-6;}
     h+=v*.1;e+=(ap?4:.8*Math.max(v,0)/100)*.1;n+=.03;if(h<0&&t>1){P.push({t:t+.1,e,n,h:0,zen:null,az:null,th:0,rr:0,spd:null});break;}}
-  const apT=P.reduce((m,p)=>p.h>m.h?p:m).t;setPoints(P,{RECOVERY_DEVICE_DEPLOYMENT:apT+.5});};
+  const apT=P.reduce((m,p)=>p.h>m.h?p:m).t;setPoints(P,{RECOVERY_DEVICE_DEPLOYMENT:apT+.5});keepDemo();};
 
 $('mk').onchange=()=>world.children.forEach(o=>{if(o.userData.mk)o.visible=$('mk').checked;});
 $('lat').onchange=$('lon').onchange=e=>{const m=e.target.value.match(/(-?\d+(?:\.\d+)?)\s*[,;\s]\s*(-?\d+(?:\.\d+)?)/);if(m&&e.target.id==='lat'){$('lat').value=m[1];$('lon').value=m[2];}buildMap();};

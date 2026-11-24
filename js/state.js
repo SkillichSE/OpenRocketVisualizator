@@ -1,6 +1,6 @@
 /* state.js: shared state, renderer, scene, camera, lights, sky and ground */
 const UP=new THREE.Vector3(0,1,0),DOWN=new THREE.Vector3(0,-1,0),$=id=>document.getElementById(id),msg=t=>{const m=$('msg');m.textContent=t;m.style.color='';};
-let evT=[],tel=null,rec=null,pipR=null;const mlat=110540;let mlon=111320,lat0=null,lon0=null,csvLL=null;
+let evT=[],tel=null,rec=null,pipR=null,keepSc=false;const mlat=110540;let mlon=111320,lat0=null,lon0=null,csvLL=null;
 let pts=[],ev={},T=0,tEnd=0,maxAlt=0,maxThr=0,ext=500,playing=false,objInfo=null,refDiam=null,modelLen=1.17,bodyR=.03,drop,smoke=[];
 
 const renderer=new THREE.WebGLRenderer({antialias:true,logarithmicDepthBuffer:true});

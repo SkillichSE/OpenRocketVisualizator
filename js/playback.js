@@ -23,8 +23,8 @@ function update(){let i=0;while(i<pts.length-2&&pts[i+1].t<=T)i++;
   else{at=pos.clone();look=DOWN.clone();const h=dir.clone().setY(0);up=h.length()>.1?h.normalize():upv.clone().setY(0).normalize();if(up.lengthSq()<.5)up.set(0,0,-1);}
   camB.position.copy(at);camB.up.copy(up);camB.lookAt(at.clone().add(look));camB.rotateX((+$('ctilt').value||0)*Math.PI/180);
   $('hP').textContent=phase();const s=Math.max(0,T-pts[0].t)|0,p2=n=>String(n).padStart(2,'0'),pr=(T-pts[0].t)/((tEnd-pts[0].t)||1),nf=x=>Math.round(x).toLocaleString('en-US');
-  $('hT').textContent='T+ '+p2(s/3600|0)+':'+p2(s/60%60|0)+':'+p2(s%60);$('hA').textContent=nf(pos.y);$('hV').textContent=nf((a.sp+(b.sp-a.sp)*k)*3.6);$('hF').textContent=nf(th);$('hM').textContent=nf(maxAlt);
-  $('fill').style.width=100*pr+'%';tel={ph:phase(),T:$('hT').textContent,v:$('hV').textContent,a:$('hA').textContent,f:$('hF').textContent,m:$('hM').textContent,pr,t0:pts[0].t,span:(tEnd-pts[0].t)||1};$('seek').value=1000*pr;}
+  $('hT').textContent='T+ '+p2(s/3600|0)+':'+p2(s/60%60|0)+':'+p2(s%60);const au=x=>x>=1e4?[(x/1e3).toFixed(1),'km']:[nf(x),'m'],A=au(pos.y),AM=au(maxAlt);$('hA').textContent=A[0];$('uA').textContent=A[1];evT.forEach(([n,t,d])=>d.classList.toggle('done',T>=t));$('hV').textContent=nf((a.sp+(b.sp-a.sp)*k)*3.6);$('hF').textContent=nf(th);$('hM').textContent=AM[0];$('uM').textContent=AM[1];
+  $('fill').style.width=100*pr+'%';tel={ph:phase(),T:$('hT').textContent,v:$('hV').textContent,a:A[0],au:A[1],f:$('hF').textContent,m:AM[0],mu:AM[1],tt:T,name:$('bn').textContent,pr,t0:pts[0].t,span:(tEnd-pts[0].t)||1};$('seek').value=1000*pr;}
 function renderAll(){const m=$('bmode').value,full=m==='full'&&pts.length,pip=m==='pip'&&pts.length,W=innerWidth,H=innerHeight,pe=$('pip');
   renderer.setScissorTest(false);renderer.setViewport(0,0,W,H);
   if(!full){sky.position.copy(camera.position);renderer.render(scene,camera);}
