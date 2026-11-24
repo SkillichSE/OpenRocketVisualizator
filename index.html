@@ -17,42 +17,42 @@
 <select id="cam"><option value="free">Free camera</option><option value="follow">Follow rocket</option></select></div>
 <div id="msg">Open the menu and load a CSV, or press Demo</div>
 <aside id="panel"><header><b>Setup</b><button id="min" title="Close (M)">✕</button></header><div id="pbody">
-<details id="s-flight" open><summary>Flight data</summary>
+<section class="main">
+<div class="grp"><span class="gt">1 Flight CSV</span>
 <div class="blk"><input type="file" id="fcsv" accept=".csv,.txt"><label class="btn" for="fcsv">Choose CSV</label><button id="demo">Demo</button></div>
-<div class="st" id="stF">No flight loaded</div>
-<span class="lb">Mission name</span><input id="mname" placeholder="Rocket Flight 3D" maxlength="40">
-</details>
-<details id="s-site" open><summary>Launch site &amp; map</summary>
-<span class="lb">Latitude / longitude (overrides CSV)</span><div class="row"><input id="lat" placeholder="Latitude"><input id="lon" placeholder="Longitude"></div>
-<button id="pick" class="wide">Pick launch site on map</button>
-<span class="lb">Map style</span>
-<select id="prov"><option value="esri">Satellite (Esri)</option><option value="esrist">Streets (Esri)</option><option value="esritopo">Topo (Esri)</option><option value="carto">Dark (CARTO)</option><option value="osm">OpenStreetMap</option><option value="google">Google Static Maps (key required)</option><option value="none">No map</option></select>
-<input id="key" placeholder="Google Maps API key" style="margin-top:6px;display:none">
-<div class="row"><div><span class="lb">Map size, km</span><input id="km" type="number" placeholder="Auto"></div><div><span class="lb">&nbsp;</span><button id="map" class="wide" style="margin:0">Update map</button></div></div>
-</details>
-<details id="s-model"><summary>Rocket model</summary>
+<div class="st" id="stF">No flight loaded</div></div>
+<div class="grp"><span class="gt">2 Rocket model OBJ</span>
 <div class="blk"><input type="file" id="fobj" accept=".obj,.mtl" multiple><label class="btn" for="fobj">Choose OBJ + MTL</label></div>
-<div class="st" id="stM">Default model</div>
+<div class="st" id="stM">Default model</div></div>
+<div class="grp"><span class="gt">3 Map</span>
+<button id="pick" class="wide">Pick launch site on map</button>
+<div class="row"><input id="lat" placeholder="Latitude"><input id="lon" placeholder="Longitude"></div>
+<select id="prov"><option value="esri">Satellite (Esri)</option><option value="esrist">Streets (Esri)</option><option value="esritopo">Topo (Esri)</option><option value="carto">Dark (CARTO)</option><option value="osm">OpenStreetMap</option><option value="google">Google Static Maps (key required)</option><option value="none">No map</option></select>
+<input id="key" placeholder="Google Maps API key" style="display:none">
+<div class="row"><input id="km" type="number" placeholder="Map size km (auto)"><button id="map">Update map</button></div></div>
+</section>
+<details id="s-opt"><summary>Options</summary>
+<div class="sub">Flight</div>
+<span class="lb">Mission name</span><input id="mname" placeholder="Rocket Flight 3D" maxlength="40">
+<div class="sub">Model</div>
 <div class="row"><div><span class="lb">Nose axis</span><select id="axis"><option value="auto">Auto</option><option>+X</option><option>-X</option><option>+Y</option><option>-Y</option><option>+Z</option><option>-Z</option></select></div>
-<div><span class="lb">Length, cm</span><input id="len" type="number" placeholder="Auto"></div></div>
-<div class="row"><div><span class="lb">Model scale ×</span><input id="sc" type="number" min="1" value="20"></div></div>
-<label class="ck"><input type="checkbox" id="exact" checked>Exact export (all parts, original colors)</label>
-<label class="ck"><input type="checkbox" id="inside">Show internals (transparent body)</label>
-</details>
-<details id="s-cam"><summary>Onboard camera</summary>
+<div><span class="lb">Length, cm</span><input id="len" type="number" placeholder="Auto"></div>
+<div><span class="lb">Scale ×</span><input id="sc" type="number" min="1" value="20"></div></div>
+<label class="ck"><input type="checkbox" id="exact" checked><span>Exact export (all parts, original colors)</span></label>
+<label class="ck"><input type="checkbox" id="inside"><span>Show internals (transparent body)</span></label>
+<div class="sub">Onboard camera</div>
 <div class="row"><div><span class="lb">Window</span><select id="bmode"><option value="pip">Corner</option><option value="full">Full screen</option><option value="off">Off</option></select></div>
 <div><span class="lb">Direction</span><select id="cview"><option value="fwd">Forward</option><option value="side">Side</option><option value="down">Down</option><option value="back">Back</option></select></div></div>
-<label class="ck"><input type="checkbox" id="stab" checked>Stabilize camera roll</label>
+<label class="ck"><input type="checkbox" id="stab" checked><span>Stabilize camera roll</span></label>
 <span class="lb">Field of view</span><input id="cfov" type="range" min="30" max="120" value="75">
 <span class="lb">Tilt</span><input id="ctilt" type="range" min="-90" max="90" value="0">
 <span class="lb">Corner window size</span><input id="psz" type="range" min="20" max="60" value="34">
-</details>
-<details id="s-view"><summary>Display</summary>
-<label class="ck"><input type="checkbox" id="mk">Show start / apogee / landing markers</label>
-<label class="ck"><input type="checkbox" id="autohide" checked>Auto-hide buttons while playing</label>
+<div class="sub">Display</div>
+<label class="ck"><input type="checkbox" id="mk"><span>Show start / apogee / landing markers</span></label>
+<label class="ck"><input type="checkbox" id="autohide" checked><span>Auto-hide buttons while playing</span></label>
 </details>
 <div class="foot"><button id="wipe" class="wide">Reset all saved data</button>
-<p>Everything is saved automatically in this browser.<br>Drop .csv / .obj / .mtl files anywhere.<br>Keys: Space play · M menu · F fullscreen · ← → ±5 s</p></div>
+<p>Everything is saved automatically in this browser<br>Drop .csv / .obj / .mtl files anywhere<br>Keys: Space play · M menu · F fullscreen · ← → ±5 s</p></div>
 </div></aside>
 <div id="mm"><div id="mh"><b>Select launch site</b><input id="mq" placeholder="Search a place or type lat, lon"><button id="mg">Search</button><button id="mu">Satellite / Streets</button><button id="mok">Use this location</button><button id="mc">Cancel</button></div><div id="mmap"></div><div id="mi">Click anywhere on the world map to place the launch site</div></div>
 <div id="foot">

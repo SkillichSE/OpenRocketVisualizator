@@ -1,4 +1,4 @@
-/* boot.js: environment checks and global error reporting */
+// check libraries and webgl and show errors
 (function(){const out=t=>{const m=document.getElementById('msg');if(m){m.textContent=t;m.style.color='#ff6b6b';}console.error(t);};
   addEventListener('error',e=>out('Error: '+(e.message||'unknown')));
   addEventListener('unhandledrejection',e=>out('Error: '+((e.reason&&e.reason.message)||e.reason)));

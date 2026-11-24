@@ -1,5 +1,4 @@
-/* recorder.js: video export with SpaceX-style telemetry overlay */
-// video export with SpaceX-style telemetry
+// draw frame with telemetry overlay
 function compose(){const c=renderer.domElement,w=rec.cv.width,h=rec.cv.height,x=rec.cx,u=h/900,s=w/innerWidth,mw=Math.min(w*.42,900*u),x0=(w-mw)/2,yT=h-40*u,W='#fff',M='rgba(255,255,255,.62)';
   x.drawImage(c,0,0,w,h);
   let g=x.createLinearGradient(0,h-260*u,0,h);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(0,0,0,.88)');x.fillStyle=g;x.fillRect(0,h-260*u,w,260*u);
@@ -13,7 +12,9 @@ function compose(){const c=renderer.domElement,w=rec.cv.width,h=rec.cv.height,x=
   tx(tel.ph.toUpperCase(),w/2,h-128*u,12,500,M,'center',3.5);tx(tel.T,w/2,h-86*u,40,600,W,'center',3);
   x.fillStyle='rgba(255,255,255,.3)';x.fillRect(x0,yT-u,mw,2*u);x.fillStyle=W;x.fillRect(x0,yT-u,mw*tel.pr,2*u);x.fillRect(x0+mw*tel.pr-1.5*u,yT-8*u,3*u,16*u);
   evT.forEach(([n,t,d],i)=>{const px=x0+mw*(t-tel.t0)/tel.span;x.save();x.translate(px,yT);x.rotate(Math.PI/4);x.fillStyle=tel.tt>=t?W:'#000';x.strokeStyle=W;x.lineWidth=u;x.fillRect(-4*u,-4*u,8*u,8*u);x.strokeRect(-4*u,-4*u,8*u,8*u);x.restore();tx(n,px,i%2?yT+24*u:yT-14*u,10,500,M,'center',1.4);});}
+// stop recording
 function stopRec(){if(rec&&rec.mr.state!=='inactive')rec.mr.stop();}
+// start recording
 function startRec(){if(rec)return stopRec();if(!pts.length)return msg('Load a flight or press Demo first');
   const c=renderer.domElement,cw=Math.min(c.width,1920)&~1,chh=Math.round(cw*c.height/c.width)&~1,cv=document.createElement('canvas');cv.width=cw;cv.height=chh;
   const mt=['video/mp4;codecs=avc1','video/webm;codecs=vp9','video/webm'].find(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported(t));
