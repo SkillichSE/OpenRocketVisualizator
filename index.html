@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rocket Flight 3D</title>
+<meta name="description" content="3D rocket flight replay from OpenRocket or GPS data, with SpaceX-style telemetry and video export.">
+<meta name="theme-color" content="#000000"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23000'/%3E%3Cpath d='M16 4l5 10v10l-3-2h-4l-3 2V14z' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="css/style.css">
+</head><body>
+<div id="view"></div><div id="scrimT"></div><div id="scrim"></div>
+<div id="pip"><span>ONBOARD CAM</span></div>
+<div id="top"><button id="gear">Setup</button><div id="brand">Rocket Flight 3D</div></div>
+<div id="ctl"><button id="play">Play</button><button id="exp">Export video</button>
+<select id="spd"><option value="0.25">×0.25</option><option value="0.5">×0.5</option><option value="1" selected>×1</option><option value="4">×4</option><option value="10">×10</option><option value="20">×20</option></select>
+<select id="cam"><option value="free">Free camera</option><option value="follow">Follow rocket</option></select></div>
+<div id="msg">Load a CSV or press Demo</div>
+<div id="panel"><h1>Setup <button id="min">Close</button></h1>
+<label>Trajectory CSV (OpenRocket export or GPS log)</label><input type="file" id="fcsv" accept=".csv,.txt">
+<label>Model OBJ (optional)</label><input type="file" id="fobj" accept=".obj">
+<div class="row"><div><label>Nose axis</label><select id="axis"><option value="auto">Auto</option><option>+X</option><option>-X</option><option>+Y</option><option>-Y</option><option>+Z</option><option>-Z</option></select></div>
+<div><label>Rocket length, cm</label><input id="len" type="number" placeholder="auto"></div></div>
+<label><input type="checkbox" id="inside">Show internals (transparent body)</label>
+<label><input type="checkbox" id="mk">Show start / apogee / landing markers</label>
+<label>Launch site: latitude / longitude (overrides CSV)</label>
+<div class="row"><input id="lat" placeholder="latitude"><input id="lon" placeholder="longitude"></div>
+<button id="pick" style="margin-top:8px;width:100%">Pick launch site on map</button>
+<label>Map</label>
+<select id="prov"><option value="esri">Satellite (Esri)</option><option value="esrist">Streets (Esri)</option><option value="esritopo">Topo (Esri)</option><option value="carto">Dark (CARTO)</option><option value="osm">OpenStreetMap</option><option value="google">Google Static Maps (key required)</option><option value="none">No map</option></select>
+<input id="key" placeholder="Google Maps API key" style="margin-top:6px;display:none">
+<div class="row"><div><label>Map size, km</label><input id="km" type="number" placeholder="auto"></div><div><label>Model scale ×</label><input id="sc" type="number" min="1" value="20"></div></div>
+<label>Onboard camera</label>
+<div class="row"><select id="bmode"><option value="pip">Corner</option><option value="full">Full screen</option><option value="off">Off</option></select>
+<select id="cview"><option value="fwd">Forward</option><option value="side">Side</option><option value="down">Down</option><option value="back">Back</option></select></div>
+<label><input type="checkbox" id="stab" checked>Stabilize camera roll</label>
+<div class="row"><div><label>FOV, °</label><input id="cfov" type="range" min="30" max="120" value="75"></div><div><label>Tilt, °</label><input id="ctilt" type="range" min="-90" max="90" value="0"></div></div>
+<label>Corner window size, %</label><input id="psz" type="range" min="20" max="60" value="34">
+<div class="row" style="margin-top:12px"><button id="demo">Demo</button><button id="map">Update map</button></div>
+<label style="margin-top:14px;text-transform:none;letter-spacing:.02em">Drop .csv and .obj files anywhere in the window. Space: play / pause.</label>
+</div>
+<div id="mm"><div id="mh"><b>Select launch site</b><input id="mq" placeholder="Search a place or type lat, lon"><button id="mg">Search</button><button id="mu">Satellite / Streets</button><button id="mok">Use this location</button><button id="mc">Cancel</button></div><div id="mmap"></div><div id="mi">Click anywhere on the world map to place the launch site</div></div>
+<div id="foot">
+<div class="tel"><small>Speed</small><div><b id="hV">0</b><u>km/h</u></div><small class="s">Thrust <span id="hF">0</span> N</small></div>
+<div id="mid"><div id="hP">Standby</div><div id="hT">T+ 00:00:00</div>
+<div id="track"><div id="fill"></div><div id="ticks"></div><input id="seek" type="range" min="0" max="1000" value="0"></div></div>
+<div class="tel r"><small>Altitude</small><div><b id="hA">0</b><u>m</u></div><small class="s">Apogee <span id="hM">0</span> M</small></div>
+</div>
+<noscript><div style="position:fixed;inset:0;display:grid;place-items:center;background:#000;z-index:99">JavaScript is required.</div></noscript>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="js/boot.js"></script>
+<script src="js/state.js"></script>
+<script src="js/rocket.js"></script>
+<script src="js/trajectory.js"></script>
+<script src="js/map.js"></script>
+<script src="js/playback.js"></script>
+<script src="js/recorder.js"></script>
+<script src="js/picker.js"></script>
+<script src="js/ui.js"></script>
+</body></html>
