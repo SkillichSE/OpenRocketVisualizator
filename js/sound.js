@@ -1,6 +1,6 @@
 // flight sounds, all synthesized with web audio (no audio files)
 let AC=null,master=null,sdest=null,SN={},sPrev=0,sBurn=false,sIdx=0;
-const sndOn=()=>$('snd').checked,clamp01=x=>Math.min(1,Math.max(0,x));
+const sndOn=()=>$('snd').checked,sClamp=x=>Math.min(1,Math.max(0,x));
 // create the audio graph (needs a user gesture)
 function sndInit(){const AX=window.AudioContext||window.webkitAudioContext;if(AC||!AX)return;
   AC=new AX();master=AC.createGain();master.gain.value=0;
@@ -45,13 +45,13 @@ function sndTick(){if(!AC||!pts.length)return;
   const on=sndOn(),vol=(+$('vol').value||0)/100,t=AC.currentTime,spd=+$('spd').value||1;
   master.gain.setTargetAtTime(on?vol:0,t,.05);if(playing&&AC.state==='suspended')AC.resume();
   while(sIdx>0&&pts[sIdx].t>T)sIdx--;while(sIdx<pts.length-2&&pts[sIdx+1].t<=T)sIdx++;
-  const a=pts[sIdx],b=pts[Math.min(sIdx+1,pts.length-1)],k=b.t>a.t?clamp01((T-a.t)/(b.t-a.t)):0,
+  const a=pts[sIdx],b=pts[Math.min(sIdx+1,pts.length-1)],k=b.t>a.t?sClamp((T-a.t)/(b.t-a.t)):0,
     th=a.th+(b.th-a.th)*k,sp=a.sp+(b.sp-a.sp)*k,h=a.h+(b.h-a.h)*k,adv=T-sPrev,normal=adv>0&&adv<=.12*spd+.05&&(playing||T>=tEnd),burn=th>1;
   if(normal&&on){if(burn&&!sBurn)SFX.ignite();for(const [n,f] of EVSFX){const te=ev[n];if(te!==undefined&&sPrev<te&&te<=T)SFX[f]();}}
   sBurn=burn&&(normal||playing||T>pts[0].t+.05);sPrev=T;
 // continuous levels
-  const eng=playing&&burn?Math.pow(clamp01(th/(maxThr||1)),.7):0,dens=Math.exp(-Math.max(0,h)/7000),
-    wnd=playing?Math.pow(clamp01(sp/120),1.6)*dens*.55:0,rate=Math.min(1.6,Math.max(.6,Math.pow(spd,.35))),tc=.07;
+  const eng=playing&&burn?Math.pow(sClamp(th/(maxThr||1)),.7):0,dens=Math.exp(-Math.max(0,h)/7000),
+    wnd=playing?Math.pow(sClamp(sp/120),1.6)*dens*.55:0,rate=Math.min(1.6,Math.max(.6,Math.pow(spd,.35))),tc=.07;
   SN.gRum.gain.setTargetAtTime(.9*eng,t,tc);SN.lp.frequency.setTargetAtTime(90+eng*280,t,tc);
   SN.gRoar.gain.setTargetAtTime(.5*eng,t,tc);SN.bp.frequency.setTargetAtTime(500+eng*1600,t,tc);SN.lfoG.gain.setTargetAtTime(.14*eng,t,tc);
   SN.gWind.gain.setTargetAtTime(wnd,t,.15);SN.wbp.frequency.setTargetAtTime(250+Math.min(sp,300)*7,t,.15);
