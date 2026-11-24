@@ -3,7 +3,7 @@ const UP=new THREE.Vector3(0,1,0),DOWN=new THREE.Vector3(0,-1,0),$=id=>document.
 // shared flight state
 let evT=[],tel=null,rec=null,pipR=null,keepSc=false;const mlat=110540;let mlon=111320,lat0=null,lon0=null,csvLL=null;
 // more shared state
-let pts=[],ev={},T=0,tEnd=0,maxAlt=0,maxThr=0,ext=500,playing=false,objInfo=null,refDiam=null,modelLen=1.17,bodyR=.03,drop,smoke=[];
+let fitC=null,pipHidden=false,pipSlide=0,manualUntil=0,pts=[],ev={},T=0,tEnd=0,maxAlt=0,maxThr=0,ext=500,playing=false,objInfo=null,refDiam=null,modelLen=1.17,bodyR=.03,drop,smoke=[];
 
 // renderer
 const renderer=new THREE.WebGLRenderer({antialias:true,logarithmicDepthBuffer:true});

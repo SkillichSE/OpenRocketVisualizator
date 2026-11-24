@@ -30,17 +30,26 @@ function update(){let i=0;while(i<pts.length-2&&pts[i+1].t<=T)i++;
   const ph=phase(),idle=!playing&&T<=pts[0].t+.001;$('hP').textContent=!playing&&!idle&&T<tEnd?ph+' · PAUSED':ph;const s=Math.max(0,T-pts[0].t)|0,p2=n=>String(n).padStart(2,'0'),pr=(T-pts[0].t)/((tEnd-pts[0].t)||1),nf=x=>Math.round(x).toLocaleString('en-US');
   const ts='T+ '+p2(s/3600|0)+':'+p2(s/60%60|0)+':'+p2(s%60);$('hT').textContent=idle?'Launch':ts;$('hT').classList.toggle('go',idle);const au=x=>x>=1e4?[(x/1e3).toFixed(1),'km']:[nf(x),'m'],A=au(pos.y),AM=au(maxAlt);$('hA').textContent=A[0];$('uA').textContent=A[1];evT.forEach(([n,t,d])=>d.classList.toggle('done',T>=t));$('hV').textContent=nf((a.sp+(b.sp-a.sp)*k)*3.6);$('hF').textContent=nf(th);$('hM').textContent=AM[0];$('uM').textContent=AM[1];
   tlStep();const tt=updTel(a,b,k,pos,dir);tel={L:tt.L,R:tt.R,w0,w1,ph,T:ts,v:$('hV').textContent,a:A[0],au:A[1],f:$('hF').textContent,m:AM[0],mu:AM[1],tt:T,name:$('bn').textContent,pr,t0:pts[0].t,span:(tEnd-pts[0].t)||1}}
-// render main view and onboard view
-function renderAll(){const m=$('bmode').value,full=m==='full'&&pts.length,pip=m==='pip'&&pts.length,W=innerWidth,H=innerHeight,pe=$('pip');
-  renderer.setScissorTest(false);renderer.setViewport(0,0,W,H);
-  if(!full){sky.position.copy(camera.position);renderer.render(scene,camera);}
-  if(full||pip){const w=full?W:Math.min(W*(+$('psz').value||34)/100,900),h=full?H:w*9/16,x=full?0:W-w-10,y=full?0:H-h-64;
-    camB.aspect=w/h;camB.fov=+$('cfov').value||75;camB.updateProjectionMatrix();renderer.setScissorTest(true);renderer.setViewport(x,y,w,h);renderer.setScissor(x,y,w,h);
-    const mode=$('cview').value,chv=chute.visible,sc=+$('sc').value||1;pe.firstElementChild.textContent='Onboard cam - '+$('cview').selectedOptions[0].text;rocket.scale.setScalar(1);rocket.visible=mode!=='down';chute.visible=false;sky.position.copy(camB.position);
-    renderer.render(scene,camB);rocket.visible=true;rocket.scale.setScalar(sc);chute.visible=chv;renderer.setScissorTest(false);
-    Object.assign(pe.style,{display:'block',left:x+'px',top:(H-y-h)+'px',width:w+'px',height:h+'px'});pipR={x,y:H-y-h,w,h,t:pe.firstElementChild.textContent};}
-  else{pe.style.display='none';pipR=null;}
-  $('tr').style.right=(m==='pip'&&pipR?pipR.w+38:28)+'px';}
+// render main view and small window (onboard corner, or external when onboard is full screen)
+function drawView(cam,x,y,w,h,onboard){cam.aspect=w/h;if(onboard)cam.fov=+$('cfov').value||75;cam.updateProjectionMatrix();
+  renderer.setScissorTest(true);renderer.setViewport(x,y,w,h);renderer.setScissor(x,y,w,h);sky.position.copy(cam.position);
+  if(onboard){const chv=chute.visible,sc=+$('sc').value||1;rocket.scale.setScalar(1);rocket.visible=$('cview').value!=='down';chute.visible=false;
+    renderer.render(scene,cam);rocket.visible=true;rocket.scale.setScalar(sc);chute.visible=chv;}
+  else renderer.render(scene,cam);renderer.setScissorTest(false);}
+function renderAll(){const m=$('bmode').value,has=pts.length>0,full=m==='full'&&has,pip=(m==='pip'||full)&&has,W=innerWidth,H=innerHeight,pe=$('pip'),tab=$('pipTab');
+  renderer.setScissorTest(false);renderer.setViewport(0,0,W,H);controls.enabled=!full;
+  pipSlide+=((pipHidden?1:0)-pipSlide)*.2;if(Math.abs((pipHidden?1:0)-pipSlide)<.002)pipSlide=pipHidden?1:0;
+  if(full)drawView(camB,0,0,W,H,true);else{camera.aspect=W/H;camera.updateProjectionMatrix();sky.position.copy(camera.position);renderer.render(scene,camera);}
+  if(pip){const w=Math.min(W*(+$('psz').value||34)/100,900),h=w*9/16,x0=W-w-10,x=x0+pipSlide*(w+10),y=H-h-64,top=64;
+    const lab=full?'External cam':'Onboard cam - '+$('cview').selectedOptions[0].text;pe.firstElementChild.textContent=lab;
+    if(pipSlide<1){drawView(full?camera:camB,x,y,w,h,!full);}
+    Object.assign(pe.style,{display:pipSlide<1?'block':'none',left:x+'px',top:top+'px',width:w+'px',height:h+'px'});
+    Object.assign(tab.style,{display:'block',left:(x-22)+'px',top:(top+h/2-22)+'px'});tab.textContent=pipHidden?'⟨':'⟩';
+    pipR=pipSlide<.5?{x,y:top,w,h,t:lab}:null;pipRect={x:x0,y:top,w,h};
+    if(full){camera.aspect=W/H;camera.updateProjectionMatrix();}}
+  else{pe.style.display='none';tab.style.display='none';pipR=null;pipRect=null;}
+  $('tr').style.right=(pipR?pipR.w*(1-pipSlide)+38:28)+'px';}
+let pipRect=null;
 // main loop
 let last=performance.now();
 function frame(now){const dt=Math.min(.1,(now-last)/1000);last=now;

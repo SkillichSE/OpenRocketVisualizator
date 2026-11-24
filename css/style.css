@@ -114,3 +114,6 @@ body.notm .stk{display:none}
 #ch div{display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.08)}#ch span{color:var(--m)}#ch b{font-weight:600;font-variant-numeric:tabular-nums}
 #dBtn{font-size:11px;letter-spacing:.14em;padding:8px 12px}
 @media(max-width:800px){.stk{display:none}#hT.go{font-size:24px;padding:8px 28px}}
+
+#pipTab{position:fixed;display:none;width:22px;height:44px;padding:0;z-index:5;background:rgba(0,0,0,.55);border:1px solid var(--l);color:#fff;font-size:14px;line-height:42px;cursor:pointer;pointer-events:auto}
+body.idle #pipTab{opacity:0}

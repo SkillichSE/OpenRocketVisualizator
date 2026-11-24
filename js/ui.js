@@ -46,3 +46,13 @@ $('camBtn').onclick=toggleCam;$('cam').onchange=camSync;
 
 // start render loop after all modules load
 resize();requestAnimationFrame(frame);
+
+// hide / show the small window (slides off the right edge)
+$('pipTab').onclick=()=>{pipHidden=!pipHidden;};
+// right-click the small window: swap it with the main view
+addEventListener('contextmenu',e=>{const r=pipRect;if(!r||pipHidden||$('bmode').value==='off')return;
+  if(e.clientX>=r.x&&e.clientX<=r.x+r.w&&e.clientY>=r.y&&e.clientY<=r.y+r.h){e.preventDefault();
+    $('bmode').value=$('bmode').value==='full'?'pip':'full';$('bmode').dispatchEvent(new Event('change',{bubbles:true}));}});
+// double-click the 3D view or press R: reset the camera
+renderer.domElement.addEventListener('dblclick',resetView);
+addEventListener('keydown',e=>{if(e.code==='KeyR'&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName))resetView();});

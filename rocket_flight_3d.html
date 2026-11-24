@@ -123,10 +123,13 @@ body.notm .stk{display:none}
 #ch div{display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.08)}#ch span{color:var(--m)}#ch b{font-weight:600;font-variant-numeric:tabular-nums}
 #dBtn{font-size:11px;letter-spacing:.14em;padding:8px 12px}
 @media(max-width:800px){.stk{display:none}#hT.go{font-size:24px;padding:8px 28px}}
+
+#pipTab{position:fixed;display:none;width:22px;height:44px;padding:0;z-index:5;background:rgba(0,0,0,.55);border:1px solid var(--l);color:#fff;font-size:14px;line-height:42px;cursor:pointer;pointer-events:auto}
+body.idle #pipTab{opacity:0}
 </style>
 </head><body>
 <div id="view"></div><div id="scrimT"></div><div id="scrim"></div>
-<div id="pip"><span>ONBOARD CAM</span></div>
+<div id="pip"><span>ONBOARD CAM</span></div><button id="pipTab" title="Hide / show small window" aria-label="Hide window">⟩</button>
 <div id="top"><button id="gear" title="Menu (M)" aria-label="Menu"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M2 4.5h14M2 9h14M2 13.5h14" stroke="#fff" stroke-width="1.5"/></svg></button>
 <div id="brand"><svg width="16" height="20" viewBox="0 0 16 20"><path d="M8 0l4 8v8l-2.5-1.5h-3L4 16V8z" fill="#fff"/><path d="M4 12l-3 5 3-1zM12 12l3 5-3-1z" fill="#fff"/></svg><span id="bn">Rocket Flight 3D</span></div></div>
 <div id="ctl"><button id="camBtn" title="Camera: free or follow (C)" aria-label="Camera"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#fff" stroke-width="1.4"><rect x="1.5" y="4.5" width="15" height="10" rx="1"/><circle cx="9" cy="9.5" r="2.8"/><path d="M6 4.5l1-2h4l1 2"/></svg><span id="camL">Free</span></button><button id="dBtn" title="All CSV channels (D)">Data</button></div>
@@ -182,7 +185,7 @@ body.notm .stk{display:none}
 <div id="foot">
 <div class="tel"><small>Speed</small><div><b id="hV">0</b><u>km/h</u></div><small class="s">Thrust <span id="hF">0</span> N</small></div>
 <div id="mid"><div id="hP">Standby</div><button id="hT">T+ 00:00:00</button>
-<div id="track"><div id="fill"></div><div id="ticks"></div><div id="head"></div></div><div id="zl"><span id="zv"></span><button id="zo" title="Zoom out">−</button><button id="zi" title="Zoom in (or scroll over the timeline)">+</button><button id="zr" title="Reset zoom (double-click timeline)">Fit</button></div></div>
+<div id="track"><div id="fill"></div><div id="ticks"></div><div id="head"></div></div><div id="zl"><span id="zv"></span></div></div>
 <div class="tel r"><small>Altitude</small><div><b id="hA">0</b><u id="uA">m</u></div><small class="s">Apogee <span id="hM">0</span> <span id="uM">m</span></small></div>
 </div>
 <noscript><div style="position:fixed;inset:0;display:grid;place-items:center;background:#000;z-index:99">JavaScript is required.</div></noscript>
@@ -204,7 +207,7 @@ const UP=new THREE.Vector3(0,1,0),DOWN=new THREE.Vector3(0,-1,0),$=id=>document.
 // shared flight state
 let evT=[],tel=null,rec=null,pipR=null,keepSc=false;const mlat=110540;let mlon=111320,lat0=null,lon0=null,csvLL=null;
 // more shared state
-let pts=[],ev={},T=0,tEnd=0,maxAlt=0,maxThr=0,ext=500,playing=false,objInfo=null,refDiam=null,modelLen=1.17,bodyR=.03,drop,smoke=[];
+let fitC=null,pipHidden=false,pipSlide=0,manualUntil=0,pts=[],ev={},T=0,tEnd=0,maxAlt=0,maxThr=0,ext=500,playing=false,objInfo=null,refDiam=null,modelLen=1.17,bodyR=.03,drop,smoke=[];
 
 // renderer
 const renderer=new THREE.WebGLRenderer({antialias:true,logarithmicDepthBuffer:true});
@@ -373,13 +376,16 @@ function setPoints(P,evIn){
   if(ev.RECOVERY_DEVICE_DEPLOYMENT!==undefined){const d=P.reduce((m,p)=>Math.abs(p.t-ev.RECOVERY_DEVICE_DEPLOYMENT)<Math.abs(m.t-ev.RECOVERY_DEVICE_DEPLOYMENT)?p:m);smoke.push({t:d.t,v:d.v.clone(),big:2.5});}
   if(smoke.length>500)smoke=smoke.filter((_,i)=>i%Math.ceil(smoke.length/500)===0);
   smoke.forEach(s=>{s.sp=new THREE.Sprite(new THREE.SpriteMaterial({map:smokeTex,color:0xe2e2e2,transparent:true,depthWrite:false,opacity:0}));s.sp.visible=false;world.add(s.sp);});
-  camera.near=Math.max(.1,ext/5000);camera.updateProjectionMatrix();controls.target.copy(c);camera.position.set(c.x+ext*.9,c.y+ext*.5,c.z+ext*.9);
+  camera.near=Math.max(.1,ext/5000);camera.updateProjectionMatrix();fitC=c.clone();controls.maxDistance=ext*4;controls.minDistance=Math.max(.3,ext*.001);resetView();
 // timeline event ticks
   const tk=$('ticks'),T0=P[0].t,span=(tEnd-T0)||1;tk.innerHTML='';evT=[];
   if(maxThr>1){let bq=0,bt;P.forEach(p=>{if(p.t<=ev.APOGEE&&p.t>T0+.5){const q=1.225*Math.exp(-p.h/8500)*p.sp*p.sp;if(q>bq){bq=q;bt=p.t;}}});if(bt!==undefined&&bt<(ev.BURNOUT??ev.APOGEE)+30)ev.MAXQ=bt;}
   [['LIFTOFF',T0],['MAX Q',ev.MAXQ],['MECO',ev.BURNOUT],['APOGEE',ev.APOGEE],['PARACHUTE',ev.RECOVERY_DEVICE_DEPLOYMENT],['LANDING',ev.GROUND_HIT]].filter(x=>x[1]!==undefined).sort((x,y)=>x[1]-y[1]).forEach(([n,t])=>{const d=document.createElement('button');d.className='tick';d.innerHTML='<i></i><span>'+n+'</span>';d.title=n+' T+'+(t-T0).toFixed(1)+' s';d.onclick=()=>{T=t;};evT.push([n,t,d,{vis:true,up:true}]);tk.appendChild(d);});tlReset();buildTel();
   setOrigin();let note='';if(csvLL&&!isFinite(parseFloat($('lat').value))&&Math.abs(csvLL[0]-28.61)<.01&&Math.abs(csvLL[1]+80.6)<.02)note=' CSV start is the default OpenRocket site (Cape Canaveral): enter your own coordinates and press Update map.';
   msg(`${P.length} points, apogee ${maxAlt.toFixed(0)} m, ${(tEnd-P[0].t).toFixed(0)} s.${note}`);buildMap(note);}
+
+// restore the default camera view
+function resetView(){if(!fitC)return;controls.target.copy(fitC);camera.position.set(fitC.x+ext*.9,fitC.y+ext*.5,fitC.z+ext*.9);}
 </script>
 <script>
 // load image and return null on error
@@ -476,8 +482,13 @@ const tlX=t=>(t-w0)/((w1-w0)||1);
 function tlReset(){w0=g0=pts[0].t;w1=g1=tEnd;}
 function tlZoom(f,tc){const a=pts[0].t,full=tEnd-a;if(tc===undefined)tc=T;const sp=Math.min(full,Math.max(Math.min(2,full),(g1-g0)*f)),fr=(tc-g0)/((g1-g0)||1);let n=tc-fr*sp;n=Math.min(tEnd-sp,Math.max(a,n));g0=n;g1=n+sp;}
 function tlStep(){const a=pts[0].t,full=(tEnd-a)||1,sp=g1-g0;
-  if(sp<full*.995&&playing&&!seeking){const x=(T-g0)/sp;if(x>.8||x<.08){let n=T-.4*sp;n=Math.min(tEnd-sp,Math.max(a,n));g0=n;g1=n+sp;}}
-  const k=.25;w0+=(g0-w0)*k;w1+=(g1-w1)*k;if(Math.abs(g0-w0)+Math.abs(g1-w1)<1e-4*full){w0=g0;w1=g1;}
+  if(seeking){g0=a;g1=tEnd;}
+  else if(Date.now()>manualUntil){
+    if(!playing&&T<=a+.001){g0=a;g1=tEnd;}
+    else{let p=a,n=tEnd;for(const t of evT.map(e=>e[1]).sort((x,y)=>x-y)){if(t<=T+1e-6)p=t;else{n=t;break;}}
+      let s2=(n-p)*1.5;s2=Math.min(full,Math.max(s2,full*.08,Math.min(8,full)));let s0=(p+n)/2-s2/2;
+      if(T<s0+.1*s2)s0=T-.1*s2;if(T>s0+.9*s2)s0=T-.9*s2;s0=Math.min(tEnd-s2,Math.max(a,s0));g0=s0;g1=s0+s2;}}
+  const k=seeking?.5:.12;w0+=(g0-w0)*k;w1+=(g1-w1)*k;if(Math.abs(g0-w0)+Math.abs(g1-w1)<1e-4*full){w0=g0;w1=g1;}
   const W=$('track').clientWidth||1;let lu=-1e9,ld=-1e9;
   evT.forEach(([n,t,d,L])=>{const x=tlX(t),px=x*W;d.style.display=x<-.03||x>1.03?'none':'';d.style.left=100*x+'%';
     const fu=px-lu>=92,fd=px-ld>=92;let up;if(fu&&fd)up=lu<=ld;else if(fu)up=true;else if(fd)up=false;else up=null;
@@ -489,9 +500,7 @@ const trk=$('track');
 trk.addEventListener('pointerdown',e=>{if(!pts.length||e.target.closest('.tick'))return;seeking=true;trk.setPointerCapture(e.pointerId);T=tAt(e.clientX);});
 trk.addEventListener('pointermove',e=>{if(seeking)T=tAt(e.clientX);});
 ['pointerup','pointercancel'].forEach(n=>trk.addEventListener(n,()=>{seeking=false;}));
-trk.addEventListener('wheel',e=>{if(!pts.length)return;e.preventDefault();tlZoom(e.deltaY<0?.75:1.33,tAt(e.clientX));},{passive:false});
-trk.addEventListener('dblclick',()=>{if(pts.length)tlReset();});
-$('zi').onclick=()=>pts.length&&tlZoom(.5);$('zo').onclick=()=>pts.length&&tlZoom(2);$('zr').onclick=()=>pts.length&&tlReset();
+trk.addEventListener('wheel',e=>{if(!pts.length)return;e.preventDefault();manualUntil=Date.now()+4000;tlZoom(e.deltaY<0?.75:1.33,tAt(e.clientX));},{passive:false});
 </script>
 <script>
 // flight phase name
@@ -526,17 +535,26 @@ function update(){let i=0;while(i<pts.length-2&&pts[i+1].t<=T)i++;
   const ph=phase(),idle=!playing&&T<=pts[0].t+.001;$('hP').textContent=!playing&&!idle&&T<tEnd?ph+' · PAUSED':ph;const s=Math.max(0,T-pts[0].t)|0,p2=n=>String(n).padStart(2,'0'),pr=(T-pts[0].t)/((tEnd-pts[0].t)||1),nf=x=>Math.round(x).toLocaleString('en-US');
   const ts='T+ '+p2(s/3600|0)+':'+p2(s/60%60|0)+':'+p2(s%60);$('hT').textContent=idle?'Launch':ts;$('hT').classList.toggle('go',idle);const au=x=>x>=1e4?[(x/1e3).toFixed(1),'km']:[nf(x),'m'],A=au(pos.y),AM=au(maxAlt);$('hA').textContent=A[0];$('uA').textContent=A[1];evT.forEach(([n,t,d])=>d.classList.toggle('done',T>=t));$('hV').textContent=nf((a.sp+(b.sp-a.sp)*k)*3.6);$('hF').textContent=nf(th);$('hM').textContent=AM[0];$('uM').textContent=AM[1];
   tlStep();const tt=updTel(a,b,k,pos,dir);tel={L:tt.L,R:tt.R,w0,w1,ph,T:ts,v:$('hV').textContent,a:A[0],au:A[1],f:$('hF').textContent,m:AM[0],mu:AM[1],tt:T,name:$('bn').textContent,pr,t0:pts[0].t,span:(tEnd-pts[0].t)||1}}
-// render main view and onboard view
-function renderAll(){const m=$('bmode').value,full=m==='full'&&pts.length,pip=m==='pip'&&pts.length,W=innerWidth,H=innerHeight,pe=$('pip');
-  renderer.setScissorTest(false);renderer.setViewport(0,0,W,H);
-  if(!full){sky.position.copy(camera.position);renderer.render(scene,camera);}
-  if(full||pip){const w=full?W:Math.min(W*(+$('psz').value||34)/100,900),h=full?H:w*9/16,x=full?0:W-w-10,y=full?0:H-h-64;
-    camB.aspect=w/h;camB.fov=+$('cfov').value||75;camB.updateProjectionMatrix();renderer.setScissorTest(true);renderer.setViewport(x,y,w,h);renderer.setScissor(x,y,w,h);
-    const mode=$('cview').value,chv=chute.visible,sc=+$('sc').value||1;pe.firstElementChild.textContent='Onboard cam - '+$('cview').selectedOptions[0].text;rocket.scale.setScalar(1);rocket.visible=mode!=='down';chute.visible=false;sky.position.copy(camB.position);
-    renderer.render(scene,camB);rocket.visible=true;rocket.scale.setScalar(sc);chute.visible=chv;renderer.setScissorTest(false);
-    Object.assign(pe.style,{display:'block',left:x+'px',top:(H-y-h)+'px',width:w+'px',height:h+'px'});pipR={x,y:H-y-h,w,h,t:pe.firstElementChild.textContent};}
-  else{pe.style.display='none';pipR=null;}
-  $('tr').style.right=(m==='pip'&&pipR?pipR.w+38:28)+'px';}
+// render main view and small window (onboard corner, or external when onboard is full screen)
+function drawView(cam,x,y,w,h,onboard){cam.aspect=w/h;if(onboard)cam.fov=+$('cfov').value||75;cam.updateProjectionMatrix();
+  renderer.setScissorTest(true);renderer.setViewport(x,y,w,h);renderer.setScissor(x,y,w,h);sky.position.copy(cam.position);
+  if(onboard){const chv=chute.visible,sc=+$('sc').value||1;rocket.scale.setScalar(1);rocket.visible=$('cview').value!=='down';chute.visible=false;
+    renderer.render(scene,cam);rocket.visible=true;rocket.scale.setScalar(sc);chute.visible=chv;}
+  else renderer.render(scene,cam);renderer.setScissorTest(false);}
+function renderAll(){const m=$('bmode').value,has=pts.length>0,full=m==='full'&&has,pip=(m==='pip'||full)&&has,W=innerWidth,H=innerHeight,pe=$('pip'),tab=$('pipTab');
+  renderer.setScissorTest(false);renderer.setViewport(0,0,W,H);controls.enabled=!full;
+  pipSlide+=((pipHidden?1:0)-pipSlide)*.2;if(Math.abs((pipHidden?1:0)-pipSlide)<.002)pipSlide=pipHidden?1:0;
+  if(full)drawView(camB,0,0,W,H,true);else{camera.aspect=W/H;camera.updateProjectionMatrix();sky.position.copy(camera.position);renderer.render(scene,camera);}
+  if(pip){const w=Math.min(W*(+$('psz').value||34)/100,900),h=w*9/16,x0=W-w-10,x=x0+pipSlide*(w+10),y=H-h-64,top=64;
+    const lab=full?'External cam':'Onboard cam - '+$('cview').selectedOptions[0].text;pe.firstElementChild.textContent=lab;
+    if(pipSlide<1){drawView(full?camera:camB,x,y,w,h,!full);}
+    Object.assign(pe.style,{display:pipSlide<1?'block':'none',left:x+'px',top:top+'px',width:w+'px',height:h+'px'});
+    Object.assign(tab.style,{display:'block',left:(x-22)+'px',top:(top+h/2-22)+'px'});tab.textContent=pipHidden?'⟨':'⟩';
+    pipR=pipSlide<.5?{x,y:top,w,h,t:lab}:null;pipRect={x:x0,y:top,w,h};
+    if(full){camera.aspect=W/H;camera.updateProjectionMatrix();}}
+  else{pe.style.display='none';tab.style.display='none';pipR=null;pipRect=null;}
+  $('tr').style.right=(pipR?pipR.w*(1-pipSlide)+38:28)+'px';}
+let pipRect=null;
 // main loop
 let last=performance.now();
 function frame(now){const dt=Math.min(.1,(now-last)/1000);last=now;
@@ -562,7 +580,7 @@ function compose(){const c=renderer.domElement,w=rec.cv.width,h=rec.cv.height,x=
   if($('tm').checked){const st=(a,xx,al)=>a.forEach(([l,v,un,fr],i)=>{const y=112*u+i*56*u,bx=al==='left'?xx:xx-80*u;tx(l.toUpperCase(),xx,y,10,500,M,al,2);
       if(al==='left'){tx(v,xx,y+24*u,22,600,W,al,.5);const vw=x.measureText(v).width;tx(un.toUpperCase(),xx+vw+7*u,y+24*u,11,500,M,al,1.5);}
       else{tx(un.toUpperCase(),xx,y+24*u,11,500,M,al,1.5);const uw=x.measureText(un.toUpperCase()).width+7*u;tx(v,xx-uw,y+24*u,22,600,W,al,.5);}
-      x.fillStyle='rgba(255,255,255,.2)';x.fillRect(bx,y+32*u,80*u,2*u);x.fillStyle=W;x.fillRect(bx,y+32*u,80*u*fr,2*u);});st(tel.L,28*u,'left');st(tel.R,pipR&&$('bmode').value==='pip'?pipR.x*s-18*u:w-28*u,'right');}
+      x.fillStyle='rgba(255,255,255,.2)';x.fillRect(bx,y+32*u,80*u,2*u);x.fillStyle=W;x.fillRect(bx,y+32*u,80*u*fr,2*u);});st(tel.L,28*u,'left');st(tel.R,pipR?pipR.x*s-18*u:w-28*u,'right');}
   const X=t=>(t-tel.w0)/((tel.w1-tel.w0)||1),cl=v=>Math.min(1,Math.max(0,v)),hx=x0+mw*cl(X(tel.tt));
   x.fillStyle='rgba(255,255,255,.3)';x.fillRect(x0,yT-u,mw,2*u);x.fillStyle=W;x.fillRect(x0,yT-u,hx-x0,2*u);x.fillRect(hx-1.5*u,yT-8*u,3*u,16*u);
   evT.forEach(([n,t,d,L])=>{const q=X(t);if(q<-.02||q>1.02)return;const px=x0+mw*q;x.save();x.translate(px,yT);x.rotate(Math.PI/4);x.fillStyle=tel.tt>=t?W:'#000';x.strokeStyle=W;x.lineWidth=u;x.fillRect(-4*u,-4*u,8*u,8*u);x.strokeRect(-4*u,-4*u,8*u,8*u);x.restore();if(L.vis)tx(n,px,L.up?yT-14*u:yT+24*u,10,500,M,'center',1.4);});}
@@ -654,6 +672,16 @@ $('camBtn').onclick=toggleCam;$('cam').onchange=camSync;
 
 // start render loop after all modules load
 resize();requestAnimationFrame(frame);
+
+// hide / show the small window (slides off the right edge)
+$('pipTab').onclick=()=>{pipHidden=!pipHidden;};
+// right-click the small window: swap it with the main view
+addEventListener('contextmenu',e=>{const r=pipRect;if(!r||pipHidden||$('bmode').value==='off')return;
+  if(e.clientX>=r.x&&e.clientX<=r.x+r.w&&e.clientY>=r.y&&e.clientY<=r.y+r.h){e.preventDefault();
+    $('bmode').value=$('bmode').value==='full'?'pip':'full';$('bmode').dispatchEvent(new Event('change',{bubbles:true}));}});
+// double-click the 3D view or press R: reset the camera
+renderer.domElement.addEventListener('dblclick',resetView);
+addEventListener('keydown',e=>{if(e.code==='KeyR'&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName))resetView();});
 </script>
 <script>
 // saved setting ids

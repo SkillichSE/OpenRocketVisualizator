@@ -69,10 +69,13 @@ function setPoints(P,evIn){
   if(ev.RECOVERY_DEVICE_DEPLOYMENT!==undefined){const d=P.reduce((m,p)=>Math.abs(p.t-ev.RECOVERY_DEVICE_DEPLOYMENT)<Math.abs(m.t-ev.RECOVERY_DEVICE_DEPLOYMENT)?p:m);smoke.push({t:d.t,v:d.v.clone(),big:2.5});}
   if(smoke.length>500)smoke=smoke.filter((_,i)=>i%Math.ceil(smoke.length/500)===0);
   smoke.forEach(s=>{s.sp=new THREE.Sprite(new THREE.SpriteMaterial({map:smokeTex,color:0xe2e2e2,transparent:true,depthWrite:false,opacity:0}));s.sp.visible=false;world.add(s.sp);});
-  camera.near=Math.max(.1,ext/5000);camera.updateProjectionMatrix();controls.target.copy(c);camera.position.set(c.x+ext*.9,c.y+ext*.5,c.z+ext*.9);
+  camera.near=Math.max(.1,ext/5000);camera.updateProjectionMatrix();fitC=c.clone();controls.maxDistance=ext*4;controls.minDistance=Math.max(.3,ext*.001);resetView();
 // timeline event ticks
   const tk=$('ticks'),T0=P[0].t,span=(tEnd-T0)||1;tk.innerHTML='';evT=[];
   if(maxThr>1){let bq=0,bt;P.forEach(p=>{if(p.t<=ev.APOGEE&&p.t>T0+.5){const q=1.225*Math.exp(-p.h/8500)*p.sp*p.sp;if(q>bq){bq=q;bt=p.t;}}});if(bt!==undefined&&bt<(ev.BURNOUT??ev.APOGEE)+30)ev.MAXQ=bt;}
   [['LIFTOFF',T0],['MAX Q',ev.MAXQ],['MECO',ev.BURNOUT],['APOGEE',ev.APOGEE],['PARACHUTE',ev.RECOVERY_DEVICE_DEPLOYMENT],['LANDING',ev.GROUND_HIT]].filter(x=>x[1]!==undefined).sort((x,y)=>x[1]-y[1]).forEach(([n,t])=>{const d=document.createElement('button');d.className='tick';d.innerHTML='<i></i><span>'+n+'</span>';d.title=n+' T+'+(t-T0).toFixed(1)+' s';d.onclick=()=>{T=t;};evT.push([n,t,d,{vis:true,up:true}]);tk.appendChild(d);});tlReset();buildTel();
   setOrigin();let note='';if(csvLL&&!isFinite(parseFloat($('lat').value))&&Math.abs(csvLL[0]-28.61)<.01&&Math.abs(csvLL[1]+80.6)<.02)note=' CSV start is the default OpenRocket site (Cape Canaveral): enter your own coordinates and press Update map.';
   msg(`${P.length} points, apogee ${maxAlt.toFixed(0)} m, ${(tEnd-P[0].t).toFixed(0)} s.${note}`);buildMap(note);}
+
+// restore the default camera view
+function resetView(){if(!fitC)return;controls.target.copy(fitC);camera.position.set(fitC.x+ext*.9,fitC.y+ext*.5,fitC.z+ext*.9);}
