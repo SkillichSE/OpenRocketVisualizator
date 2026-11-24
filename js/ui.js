@@ -5,12 +5,12 @@ addEventListener('keydown',e=>{if(e.code==='Space'&&!/INPUT|SELECT/.test(e.targe
 $('seek').oninput=e=>{if(pts.length)T=pts[0].t+(tEnd-pts[0].t)*e.target.value/1000;};
 $('min').onclick=$('gear').onclick=()=>$('panel').classList.toggle('min');
 $('fcsv').onchange=async e=>{const f=e.target.files[0];if(f){loadCSV(await f.text());applyObj();}};
-$('fobj').onchange=async e=>{const f=e.target.files[0];if(f)loadOBJ(await f.text());};
-$('axis').onchange=$('len').onchange=$('inside').onchange=applyObj;
+$('fobj').onchange=e=>loadModelFiles(e.target.files);
+$('axis').onchange=$('len').onchange=$('inside').onchange=$('exact').onchange=applyObj;
 $('prov').onchange=()=>{$('key').style.display=$('prov').value==='google'?'block':'none';buildMap();};
 $('map').onclick=()=>buildMap();$('km').onchange=()=>buildMap();
 addEventListener('dragover',e=>e.preventDefault());
-addEventListener('drop',async e=>{e.preventDefault();for(const f of e.dataTransfer.files){const t=await f.text();if(/\.obj$/i.test(f.name))loadOBJ(t);else{loadCSV(t);applyObj();}}});
+addEventListener('drop',async e=>{e.preventDefault();const fl=[...e.dataTransfer.files],isM=f=>/\.(obj|mtl)$/i.test(f.name),md=fl.filter(isM);if(md.length)await loadModelFiles(md);for(const f of fl)if(!isM(f)){loadCSV(await f.text());applyObj();}});
 $('demo').onclick=()=>{const P=[];let t=0,h=0,v=0,e=0,n=0,ap=false;csvLL=null;
   for(;t<150;t=Math.round((t+.1)*10)/10){P.push({t,e,n,h,zen:null,az:null,th:t<3?300:0,rr:120,spd:null});
     if(t<3)v+=5.5;else if(v>0&&!ap)v-=(9.81+4e-4*v*v)*.1;else{ap=true;v=-6;}

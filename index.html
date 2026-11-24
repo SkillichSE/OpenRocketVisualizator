@@ -17,9 +17,10 @@
 <div id="msg">Load a CSV or press Demo</div>
 <div id="panel"><h1>Setup <button id="min">Close</button></h1>
 <label>Trajectory CSV (OpenRocket export or GPS log)</label><input type="file" id="fcsv" accept=".csv,.txt">
-<label>Model OBJ (optional)</label><input type="file" id="fobj" accept=".obj">
+<label>Model OBJ + MTL (optional, select both)</label><input type="file" id="fobj" accept=".obj,.mtl" multiple>
 <div class="row"><div><label>Nose axis</label><select id="axis"><option value="auto">Auto</option><option>+X</option><option>-X</option><option>+Y</option><option>-Y</option><option>+Z</option><option>-Z</option></select></div>
 <div><label>Rocket length, cm</label><input id="len" type="number" placeholder="auto"></div></div>
+<label><input type="checkbox" id="exact" checked>Exact export: all parts, original colors</label>
 <label><input type="checkbox" id="inside">Show internals (transparent body)</label>
 <label><input type="checkbox" id="mk">Show start / apogee / landing markers</label>
 <label>Launch site: latitude / longitude (overrides CSV)</label>
