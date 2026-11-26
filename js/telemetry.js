@@ -8,8 +8,8 @@ const MD=[
 {id:'ac',l:'G-force',u:'g',re:/^total acceleration/,g:1,fb:s=>s.ac},
 {id:'mach',l:'Mach',u:'',re:/^mach/,d:2,fb:s=>s.sp/ISA(s.h).a},
 {id:'rng',l:'Downrange',u:'m',re:/^lateral distance/,km:1,fb:s=>Math.hypot(s.e,s.n)},
-{id:'pit',l:'Pitch',u:'°',fb:s=>Math.asin(Math.max(-1,Math.min(1,s.d.y)))*180/Math.PI},
-{id:'hdg',l:'Heading',u:'°',fb:s=>(Math.atan2(s.d.x,-s.d.z)*180/Math.PI+360)%360},
+{id:'pit',l:'Pitch',u:'°',re:/zenith|^vertical orientation/,tr:v=>90-v,fb:s=>Math.asin(Math.max(-1,Math.min(1,s.d.y)))*180/Math.PI},
+{id:'hdg',l:'Heading',u:'°',re:/azimuth|^lateral orientation/,ang:1,fb:s=>(Math.atan2(s.d.x,-s.d.z)*180/Math.PI+360)%360},
 {id:'q',l:'Dynamic pressure',u:'kPa',re:/^dynamic pressure/,fb:s=>.5*ISA(s.h).rho*s.sp*s.sp/1000},
 {id:'tmp',l:'Air temp',u:'°C',re:/^air temperature/,fb:s=>ISA(s.h).T-273.15},
 {id:'prs',l:'Air pressure',u:'hPa',re:/^air pressure/,fb:s=>ISA(s.h).p/100},
@@ -23,7 +23,7 @@ const MD=[
 {id:'sat',l:'Satellites',u:'',re:/^(sat|number of sat)/,d:0}];
 const fm=(v,d)=>{if(v===null||!isFinite(v))return '—';const a=Math.abs(v);return d!==undefined?v.toFixed(d):a>=1e3?Math.round(v).toLocaleString('en-US'):a>=100?v.toFixed(0):a>=10?v.toFixed(1):v.toFixed(2);};
 // value of one metric between points a and b
-function mval(m,a,b,k,s){if(m.ci>=0&&a.c&&b.c){const x=a.c[m.ci],y=b.c[m.ci];if(isFinite(x)&&isFinite(y)){let v=lerp(x,y,k);if(m.g&&/m\/s/.test(m.u0))v/=9.80665;return v;}}return m.fb?m.fb(s):null;}
+function mval(m,a,b,k,s){if(m.ci>=0&&a.c&&b.c){const x=a.c[m.ci],y=b.c[m.ci];if(isFinite(x)&&isFinite(y)){let v;if(m.ang){let dd=((y-x)%360+540)%360-180;v=((x+dd*k)%360+360)%360;}else v=lerp(x,y,k);if(m.tr)v=m.tr(v);if(m.g&&/m\/s/.test(m.u0))v/=9.80665;return v;}}return m.fb?m.fb(s):null;}
 const smp=(a,b,k,pos,dir)=>({h:pos.y,e:pos.x,n:-pos.z,sp:lerp(a.sp,b.sp,k),vel:{y:lerp(a.vel.y,b.vel.y,k)},ac:lerp(a.ac,b.ac,k),d:dir,rr:lerp(a.rr,b.rr,k)});
 // build side stacks and the all channels list
 function buildTel(){

@@ -5,10 +5,6 @@ const phase=()=>{if(!playing&&T<=pts[0].t+.001)return 'STANDBY';const dep=ev.REC
 function update(){let i=0;while(i<pts.length-2&&pts[i+1].t<=T)i++;
   const a=pts[i],b=pts[Math.min(i+1,pts.length-1)],k=b.t>a.t?Math.min(1,Math.max(0,(T-a.t)/(b.t-a.t))):0,sc=+$('sc').value||1;
   const pos=a.v.clone().lerp(b.v,k),dir=a.d.clone().lerp(b.d,k).normalize(),roll=a.roll+(b.roll-a.roll)*k,th=a.th+(b.th-a.th)*k,dep=ev.RECOVERY_DEVICE_DEPLOYMENT;
-// parachute swing
-  if(dep!==undefined&&T>dep){const s=T-dep,e=Math.min(1,s/1.2),am=(2+9*Math.exp(-s/18))*e*Math.PI/180,w=2*Math.PI/3.2,
-    ax=new THREE.Vector3().crossVectors(dir,Math.abs(dir.y)>.99?new THREE.Vector3(1,0,0):UP).normalize(),ay=new THREE.Vector3().crossVectors(dir,ax).normalize();
-    dir.applyAxisAngle(ax,am*Math.sin(w*s)).applyAxisAngle(ay,am*.6*Math.sin(w*s*.93+1.3)).normalize();}
   rocket.position.copy(pos);rocket.quaternion.setFromUnitVectors(UP,dir).multiply(new THREE.Quaternion().setFromAxisAngle(UP,roll));rocket.scale.setScalar(sc);
 // flame size
   const fl=maxThr>0?th/maxThr:0;flame.visible=th>1;if(flame.visible){const h=modelLen*1.3*fl*(.85+.3*Math.random());
