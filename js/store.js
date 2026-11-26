@@ -1,5 +1,5 @@
 // saved setting ids
-const LSK='rf3d.v1',IDS=['axis','len','exact','inside','mk','lat','lon','prov','key','km','sc','bmode','cview','stab','cfov','ctilt','psz','spd','cam','mname','autohide','tm','snd','vol'];
+const LSK='rf3d.v1',IDS=['axis','len','exact','inside','lat','lon','prov','key','km','sc','bmode','cview','stab','cfov','ctilt','psz','spd','cam','mname','autohide','tm','snd','vol'];
 let ready=false;
 // indexeddb for big files
 const idb=new Promise(r=>{try{const q=indexedDB.open('rf3d',1);q.onupgradeneeded=()=>q.result.createObjectStore('kv');q.onsuccess=()=>r(q.result);q.onerror=()=>r(null);}catch(e){r(null);}});

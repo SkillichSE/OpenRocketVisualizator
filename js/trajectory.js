@@ -62,10 +62,9 @@ function setPoints(P,evIn){
   world.add(new THREE.Line(g1,new THREE.LineBasicMaterial({color:0x6b7bb0})),new THREE.Line(g1.clone(),new THREE.LineBasicMaterial({color:0xff8a3d})));
   const gd=new THREE.BufferGeometry();gd.setAttribute('position',new THREE.Float32BufferAttribute(new Float32Array(6),3));
   drop=new THREE.Line(gd,new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:.5}));world.add(drop);
-  const rad=ext*.003;[[P[0],0x34d17a],[ap,0xffd23f],[P[P.length-1],0xff4d5e]].forEach(([p,col])=>{const m=new THREE.Mesh(new THREE.SphereGeometry(rad,12,12),new THREE.MeshBasicMaterial({color:col}));m.position.copy(p.v);m.visible=$('mk').checked;m.userData.mk=1;world.add(m);});
 // exhaust smoke and ejection puff
-  smoke=[];let lt=-9;const sc0=+$('sc').value||1;
-  P.forEach(p=>{if(p.th>1&&p.t-lt>=.05){lt=p.t;smoke.push({t:p.t,v:p.v.clone().addScaledVector(p.d,-modelLen*sc0*.5),big:p.h<40?3:1});}});
+  smoke=[];let lt=-9;
+  P.forEach(p=>{if(p.th>1&&p.t-lt>=.05){lt=p.t;smoke.push({t:p.t,v:p.v.clone(),big:p.h<40?3:1});}});
   if(ev.RECOVERY_DEVICE_DEPLOYMENT!==undefined){const d=P.reduce((m,p)=>Math.abs(p.t-ev.RECOVERY_DEVICE_DEPLOYMENT)<Math.abs(m.t-ev.RECOVERY_DEVICE_DEPLOYMENT)?p:m);smoke.push({t:d.t,v:d.v.clone(),big:2.5});}
   if(smoke.length>500)smoke=smoke.filter((_,i)=>i%Math.ceil(smoke.length/500)===0);
   smoke.forEach(s=>{s.sp=new THREE.Sprite(new THREE.SpriteMaterial({map:smokeTex,color:0xe2e2e2,transparent:true,depthWrite:false,opacity:0}));s.sp.visible=false;world.add(s.sp);});

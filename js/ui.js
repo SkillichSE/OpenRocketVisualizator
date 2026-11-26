@@ -36,7 +36,6 @@ function runDemo(){const P=[];let t=0,h=0,v=0,e=0,n=0,ap=false;csvLL=null;
   const apT=P.reduce((m,p)=>p.h>m.h?p:m).t;setPoints(P,{RECOVERY_DEVICE_DEPLOYMENT:apT+.5});keepDemo();}
 
 // markers toggle
-$('mk').onchange=()=>world.children.forEach(o=>{if(o.userData.mk)o.visible=$('mk').checked;});
 // coordinate input
 $('lat').onchange=$('lon').onchange=e=>{const m=e.target.value.match(/(-?\d+(?:\.\d+)?)\s*[,;\s]\s*(-?\d+(?:\.\d+)?)/);if(m&&e.target.id==='lat'){$('lat').value=m[1];$('lon').value=m[2];}syncSel();};
 // camera toggle button

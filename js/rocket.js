@@ -15,7 +15,7 @@ const smokeTex=(()=>{const c=document.createElement('canvas');c.width=c.height=6
 
 // model helpers
 function clearHolder(){while(holder.children.length)holder.remove(holder.children[0]);}
-function setFlame(){flame.position.y=-modelLen/2;}
+function setFlame(){holder.position.y=modelLen/2;flame.position.y=0;}
 // default rocket body
 function useDefault(){clearHolder();const g=new THREE.Group(),w=new THREE.MeshStandardMaterial({color:0xe8e8ee,roughness:.5}),r=new THREE.MeshStandardMaterial({color:0xd32f3f,roughness:.5});
   const b=new THREE.Mesh(new THREE.CylinderGeometry(.03,.03,.9,24),w);b.position.y=-.135;const n=new THREE.Mesh(new THREE.ConeGeometry(.03,.27,24),r);n.position.y=.45;g.add(b,n);

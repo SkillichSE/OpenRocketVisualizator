@@ -5,8 +5,10 @@ const phase=()=>{if(!playing&&T<=pts[0].t+.001)return 'STANDBY';const dep=ev.REC
 function update(){let i=0;while(i<pts.length-2&&pts[i+1].t<=T)i++;
   const a=pts[i],b=pts[Math.min(i+1,pts.length-1)],k=b.t>a.t?Math.min(1,Math.max(0,(T-a.t)/(b.t-a.t))):0,sc=+$('sc').value||1;
   const pos=a.v.clone().lerp(b.v,k),dir=a.d.clone().lerp(b.d,k).normalize(),roll=a.roll+(b.roll-a.roll)*k,th=a.th+(b.th-a.th)*k,dep=ev.RECOVERY_DEVICE_DEPLOYMENT;
-// tilt down after parachute
-  if(dep!==undefined&&T>dep){dir.lerp(DOWN,Math.min(1,(T-dep)/1.5)).normalize();}
+// parachute swing
+  if(dep!==undefined&&T>dep){const s=T-dep,e=Math.min(1,s/1.2),am=(2+9*Math.exp(-s/18))*e*Math.PI/180,w=2*Math.PI/3.2,
+    ax=new THREE.Vector3().crossVectors(dir,Math.abs(dir.y)>.99?new THREE.Vector3(1,0,0):UP).normalize(),ay=new THREE.Vector3().crossVectors(dir,ax).normalize();
+    dir.applyAxisAngle(ax,am*Math.sin(w*s)).applyAxisAngle(ay,am*.6*Math.sin(w*s*.93+1.3)).normalize();}
   rocket.position.copy(pos);rocket.quaternion.setFromUnitVectors(UP,dir).multiply(new THREE.Quaternion().setFromAxisAngle(UP,roll));rocket.scale.setScalar(sc);
 // flame size
   const fl=maxThr>0?th/maxThr:0;flame.visible=th>1;if(flame.visible){const h=modelLen*1.3*fl*(.85+.3*Math.random());
@@ -14,7 +16,7 @@ function update(){let i=0;while(i<pts.length-2&&pts[i+1].t<=T)i++;
 // smoke sprites
   const sm=Math.max(modelLen*sc*.35,2);smoke.forEach(s=>{const age=T-s.t,vis=age>=0&&age<14;s.sp.visible=vis;if(vis){s.sp.position.copy(s.v);const z=sm*s.big*(1+age*.7);s.sp.scale.set(z,z,1);s.sp.material.opacity=.5*(1-age/14)*(s.big===2.5?1.2:1);}});
 // parachute
-  chute.visible=dep!==undefined&&T>=dep;if(chute.visible){chute.position.copy(pos);chute.scale.setScalar(modelLen*sc);}
+  chute.visible=dep!==undefined&&T>=dep;if(chute.visible){chute.position.copy(pos).addScaledVector(dir,modelLen*sc);chute.scale.setScalar(modelLen*sc*Math.min(1,.2+.8*(T-dep)/1.5));}
 // trail and ground line
   world.children[1].geometry.setDrawRange(0,i+2);
   const dp=drop.geometry.attributes.position;dp.setXYZ(0,pos.x,pos.y,pos.z);dp.setXYZ(1,pos.x,0,pos.z);dp.needsUpdate=true;
@@ -22,9 +24,9 @@ function update(){let i=0;while(i<pts.length-2&&pts[i+1].t<=T)i++;
   if($('cam').value==='follow'){const dl=pos.clone().sub(controls.target);controls.target.add(dl);camera.position.add(dl);}
 // onboard camera pose
   const mode=$('cview').value,L=modelLen,ref=Math.abs(dir.y)>.99?new THREE.Vector3(0,0,1):UP.clone(),r0=new THREE.Vector3().crossVectors(dir,ref).normalize(),u0=new THREE.Vector3().crossVectors(r0,dir).normalize(),rr=$('stab').checked?0:roll,right=r0.clone().applyAxisAngle(dir,rr),upv=u0.clone().applyAxisAngle(dir,rr);
-  let at,look,up;if(mode==='fwd'||mode==='back'){at=pos.clone().addScaledVector(right,bodyR*1.7).addScaledVector(dir,L*.3);look=mode==='fwd'?dir.clone():dir.clone().negate();up=upv;}
-  else if(mode==='side'){at=pos.clone().addScaledVector(right,bodyR+.01).addScaledVector(dir,L*.2);look=right.clone();up=dir.clone();}
-  else{at=pos.clone();look=DOWN.clone();const h=dir.clone().setY(0);up=h.length()>.1?h.normalize():upv.clone().setY(0).normalize();if(up.lengthSq()<.5)up.set(0,0,-1);}
+  let at,look,up;if(mode==='fwd'||mode==='back'){at=pos.clone().addScaledVector(right,bodyR*1.7).addScaledVector(dir,L*.8);look=mode==='fwd'?dir.clone():dir.clone().negate();up=upv;}
+  else if(mode==='side'){at=pos.clone().addScaledVector(right,bodyR+.01).addScaledVector(dir,L*.7);look=right.clone();up=dir.clone();}
+  else{at=pos.clone().addScaledVector(dir,L*.5);look=DOWN.clone();const h=dir.clone().setY(0);up=h.length()>.1?h.normalize():upv.clone().setY(0).normalize();if(up.lengthSq()<.5)up.set(0,0,-1);}
   camB.position.copy(at);camB.up.copy(up);camB.lookAt(at.clone().add(look));camB.rotateX((+$('ctilt').value||0)*Math.PI/180);
 // telemetry text
   const ph=phase(),idle=!playing&&T<=pts[0].t+.001;$('hP').textContent=!playing&&!idle&&T<tEnd?ph+' · PAUSED':ph;const s=Math.max(0,T-pts[0].t)|0,p2=n=>String(n).padStart(2,'0'),pr=(T-pts[0].t)/((tEnd-pts[0].t)||1),nf=x=>Math.round(x).toLocaleString('en-US');

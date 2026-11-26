@@ -173,7 +173,6 @@ body.idle #pipTab{opacity:0}
 <span class="lb">Corner window size</span><input id="psz" type="range" min="20" max="60" value="34">
 <div class="sub">Display</div>
 <label class="ck"><input type="checkbox" id="tm" checked><span>Show telemetry panels (T)</span></label>
-<label class="ck"><input type="checkbox" id="mk"><span>Show start / apogee / landing markers</span></label>
 <label class="ck"><input type="checkbox" id="autohide" checked><span>Auto-hide buttons while playing</span></label>
 <div class="sub">Sound</div>
 <label class="ck"><input type="checkbox" id="snd" checked><span>Flight sounds (S)</span></label>
@@ -255,7 +254,7 @@ const smokeTex=(()=>{const c=document.createElement('canvas');c.width=c.height=6
 
 // model helpers
 function clearHolder(){while(holder.children.length)holder.remove(holder.children[0]);}
-function setFlame(){flame.position.y=-modelLen/2;}
+function setFlame(){holder.position.y=modelLen/2;flame.position.y=0;}
 // default rocket body
 function useDefault(){clearHolder();const g=new THREE.Group(),w=new THREE.MeshStandardMaterial({color:0xe8e8ee,roughness:.5}),r=new THREE.MeshStandardMaterial({color:0xd32f3f,roughness:.5});
   const b=new THREE.Mesh(new THREE.CylinderGeometry(.03,.03,.9,24),w);b.position.y=-.135;const n=new THREE.Mesh(new THREE.ConeGeometry(.03,.27,24),r);n.position.y=.45;g.add(b,n);
@@ -377,10 +376,9 @@ function setPoints(P,evIn){
   world.add(new THREE.Line(g1,new THREE.LineBasicMaterial({color:0x6b7bb0})),new THREE.Line(g1.clone(),new THREE.LineBasicMaterial({color:0xff8a3d})));
   const gd=new THREE.BufferGeometry();gd.setAttribute('position',new THREE.Float32BufferAttribute(new Float32Array(6),3));
   drop=new THREE.Line(gd,new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:.5}));world.add(drop);
-  const rad=ext*.003;[[P[0],0x34d17a],[ap,0xffd23f],[P[P.length-1],0xff4d5e]].forEach(([p,col])=>{const m=new THREE.Mesh(new THREE.SphereGeometry(rad,12,12),new THREE.MeshBasicMaterial({color:col}));m.position.copy(p.v);m.visible=$('mk').checked;m.userData.mk=1;world.add(m);});
 // exhaust smoke and ejection puff
-  smoke=[];let lt=-9;const sc0=+$('sc').value||1;
-  P.forEach(p=>{if(p.th>1&&p.t-lt>=.05){lt=p.t;smoke.push({t:p.t,v:p.v.clone().addScaledVector(p.d,-modelLen*sc0*.5),big:p.h<40?3:1});}});
+  smoke=[];let lt=-9;
+  P.forEach(p=>{if(p.th>1&&p.t-lt>=.05){lt=p.t;smoke.push({t:p.t,v:p.v.clone(),big:p.h<40?3:1});}});
   if(ev.RECOVERY_DEVICE_DEPLOYMENT!==undefined){const d=P.reduce((m,p)=>Math.abs(p.t-ev.RECOVERY_DEVICE_DEPLOYMENT)<Math.abs(m.t-ev.RECOVERY_DEVICE_DEPLOYMENT)?p:m);smoke.push({t:d.t,v:d.v.clone(),big:2.5});}
   if(smoke.length>500)smoke=smoke.filter((_,i)=>i%Math.ceil(smoke.length/500)===0);
   smoke.forEach(s=>{s.sp=new THREE.Sprite(new THREE.SpriteMaterial({map:smokeTex,color:0xe2e2e2,transparent:true,depthWrite:false,opacity:0}));s.sp.visible=false;world.add(s.sp);});
@@ -518,8 +516,10 @@ const phase=()=>{if(!playing&&T<=pts[0].t+.001)return 'STANDBY';const dep=ev.REC
 function update(){let i=0;while(i<pts.length-2&&pts[i+1].t<=T)i++;
   const a=pts[i],b=pts[Math.min(i+1,pts.length-1)],k=b.t>a.t?Math.min(1,Math.max(0,(T-a.t)/(b.t-a.t))):0,sc=+$('sc').value||1;
   const pos=a.v.clone().lerp(b.v,k),dir=a.d.clone().lerp(b.d,k).normalize(),roll=a.roll+(b.roll-a.roll)*k,th=a.th+(b.th-a.th)*k,dep=ev.RECOVERY_DEVICE_DEPLOYMENT;
-// tilt down after parachute
-  if(dep!==undefined&&T>dep){dir.lerp(DOWN,Math.min(1,(T-dep)/1.5)).normalize();}
+// parachute swing
+  if(dep!==undefined&&T>dep){const s=T-dep,e=Math.min(1,s/1.2),am=(2+9*Math.exp(-s/18))*e*Math.PI/180,w=2*Math.PI/3.2,
+    ax=new THREE.Vector3().crossVectors(dir,Math.abs(dir.y)>.99?new THREE.Vector3(1,0,0):UP).normalize(),ay=new THREE.Vector3().crossVectors(dir,ax).normalize();
+    dir.applyAxisAngle(ax,am*Math.sin(w*s)).applyAxisAngle(ay,am*.6*Math.sin(w*s*.93+1.3)).normalize();}
   rocket.position.copy(pos);rocket.quaternion.setFromUnitVectors(UP,dir).multiply(new THREE.Quaternion().setFromAxisAngle(UP,roll));rocket.scale.setScalar(sc);
 // flame size
   const fl=maxThr>0?th/maxThr:0;flame.visible=th>1;if(flame.visible){const h=modelLen*1.3*fl*(.85+.3*Math.random());
@@ -527,7 +527,7 @@ function update(){let i=0;while(i<pts.length-2&&pts[i+1].t<=T)i++;
 // smoke sprites
   const sm=Math.max(modelLen*sc*.35,2);smoke.forEach(s=>{const age=T-s.t,vis=age>=0&&age<14;s.sp.visible=vis;if(vis){s.sp.position.copy(s.v);const z=sm*s.big*(1+age*.7);s.sp.scale.set(z,z,1);s.sp.material.opacity=.5*(1-age/14)*(s.big===2.5?1.2:1);}});
 // parachute
-  chute.visible=dep!==undefined&&T>=dep;if(chute.visible){chute.position.copy(pos);chute.scale.setScalar(modelLen*sc);}
+  chute.visible=dep!==undefined&&T>=dep;if(chute.visible){chute.position.copy(pos).addScaledVector(dir,modelLen*sc);chute.scale.setScalar(modelLen*sc*Math.min(1,.2+.8*(T-dep)/1.5));}
 // trail and ground line
   world.children[1].geometry.setDrawRange(0,i+2);
   const dp=drop.geometry.attributes.position;dp.setXYZ(0,pos.x,pos.y,pos.z);dp.setXYZ(1,pos.x,0,pos.z);dp.needsUpdate=true;
@@ -535,9 +535,9 @@ function update(){let i=0;while(i<pts.length-2&&pts[i+1].t<=T)i++;
   if($('cam').value==='follow'){const dl=pos.clone().sub(controls.target);controls.target.add(dl);camera.position.add(dl);}
 // onboard camera pose
   const mode=$('cview').value,L=modelLen,ref=Math.abs(dir.y)>.99?new THREE.Vector3(0,0,1):UP.clone(),r0=new THREE.Vector3().crossVectors(dir,ref).normalize(),u0=new THREE.Vector3().crossVectors(r0,dir).normalize(),rr=$('stab').checked?0:roll,right=r0.clone().applyAxisAngle(dir,rr),upv=u0.clone().applyAxisAngle(dir,rr);
-  let at,look,up;if(mode==='fwd'||mode==='back'){at=pos.clone().addScaledVector(right,bodyR*1.7).addScaledVector(dir,L*.3);look=mode==='fwd'?dir.clone():dir.clone().negate();up=upv;}
-  else if(mode==='side'){at=pos.clone().addScaledVector(right,bodyR+.01).addScaledVector(dir,L*.2);look=right.clone();up=dir.clone();}
-  else{at=pos.clone();look=DOWN.clone();const h=dir.clone().setY(0);up=h.length()>.1?h.normalize():upv.clone().setY(0).normalize();if(up.lengthSq()<.5)up.set(0,0,-1);}
+  let at,look,up;if(mode==='fwd'||mode==='back'){at=pos.clone().addScaledVector(right,bodyR*1.7).addScaledVector(dir,L*.8);look=mode==='fwd'?dir.clone():dir.clone().negate();up=upv;}
+  else if(mode==='side'){at=pos.clone().addScaledVector(right,bodyR+.01).addScaledVector(dir,L*.7);look=right.clone();up=dir.clone();}
+  else{at=pos.clone().addScaledVector(dir,L*.5);look=DOWN.clone();const h=dir.clone().setY(0);up=h.length()>.1?h.normalize():upv.clone().setY(0).normalize();if(up.lengthSq()<.5)up.set(0,0,-1);}
   camB.position.copy(at);camB.up.copy(up);camB.lookAt(at.clone().add(look));camB.rotateX((+$('ctilt').value||0)*Math.PI/180);
 // telemetry text
   const ph=phase(),idle=!playing&&T<=pts[0].t+.001;$('hP').textContent=!playing&&!idle&&T<tEnd?ph+' · PAUSED':ph;const s=Math.max(0,T-pts[0].t)|0,p2=n=>String(n).padStart(2,'0'),pr=(T-pts[0].t)/((tEnd-pts[0].t)||1),nf=x=>Math.round(x).toLocaleString('en-US');
@@ -743,7 +743,6 @@ function runDemo(){const P=[];let t=0,h=0,v=0,e=0,n=0,ap=false;csvLL=null;
   const apT=P.reduce((m,p)=>p.h>m.h?p:m).t;setPoints(P,{RECOVERY_DEVICE_DEPLOYMENT:apT+.5});keepDemo();}
 
 // markers toggle
-$('mk').onchange=()=>world.children.forEach(o=>{if(o.userData.mk)o.visible=$('mk').checked;});
 // coordinate input
 $('lat').onchange=$('lon').onchange=e=>{const m=e.target.value.match(/(-?\d+(?:\.\d+)?)\s*[,;\s]\s*(-?\d+(?:\.\d+)?)/);if(m&&e.target.id==='lat'){$('lat').value=m[1];$('lon').value=m[2];}syncSel();};
 // camera toggle button
@@ -772,7 +771,7 @@ $('demoBtn').onclick=()=>{mtlInfo=null;dropModel('mtl');keepModel('obj','da.obj'
 </script>
 <script>
 // saved setting ids
-const LSK='rf3d.v1',IDS=['axis','len','exact','inside','mk','lat','lon','prov','key','km','sc','bmode','cview','stab','cfov','ctilt','psz','spd','cam','mname','autohide','tm','snd','vol'];
+const LSK='rf3d.v1',IDS=['axis','len','exact','inside','lat','lon','prov','key','km','sc','bmode','cview','stab','cfov','ctilt','psz','spd','cam','mname','autohide','tm','snd','vol'];
 let ready=false;
 // indexeddb for big files
 const idb=new Promise(r=>{try{const q=indexedDB.open('rf3d',1);q.onupgradeneeded=()=>q.result.createObjectStore('kv');q.onsuccess=()=>r(q.result);q.onerror=()=>r(null);}catch(e){r(null);}});
